@@ -22,13 +22,16 @@ REFRESH_TOKEN_TYPE = "refresh"
 
 # ── Password hashing ──────────────────────────────────────────────────────
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    # Safely truncate to 72 bytes (bcrypt's hard max byte limit)
+    pwd_bytes = password.encode("utf-8")[:72]
+    return pwd_context.hash(pwd_bytes.decode("utf-8", errors="ignore"))
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
-        return pwd_context.verify(plain_password, hashed_password)
-    except ValueError:
+        pwd_bytes = plain_password.encode("utf-8")[:72]
+        return pwd_context.verify(pwd_bytes.decode("utf-8", errors="ignore"), hashed_password)
+    except Exception:
         # Malformed/unknown hash — treat as a non-match rather than raising.
         return False
 

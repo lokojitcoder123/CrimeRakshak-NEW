@@ -7,19 +7,15 @@ echo.
 echo 1. Navigating to frontend...
 cd /d "%~dp0frontend"
 
-echo 2. Installing frontend dependencies...
-call npm install --no-audit --no-fund
-
-echo 3. Building Next.js frontend with new API URL...
+echo 2. Building Next.js frontend...
 call npm run build
 
-echo 4. Packaging deployment zip files...
+echo 3. Packaging deployment zip files using python...
 cd /d "%~dp0"
-powershell -NoProfile -ExecutionPolicy Bypass -File create-zips.ps1
+python zip_helper.py
 
 echo.
 echo ==================================================
-echo Done! Now upload the backend.zip and frontend.zip
-echo files directly into your Zoho Catalyst Console.
+echo Done! frontend.zip and backend.zip created successfully!
 echo ==================================================
 pause
