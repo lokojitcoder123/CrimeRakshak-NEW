@@ -36,17 +36,29 @@ _clerk_jwks_cache = None
 def get_clerk_jwks():
     global _clerk_jwks_cache
     if _clerk_jwks_cache is None:
-        url = "https://api.clerk.com/v1/jwks"
-        headers = {}
         secret = settings.CLERK_SECRET_KEY
         if secret:
-            headers["Authorization"] = f"Bearer {secret}"
-        resp = requests.get(url, headers=headers)
-        if resp.ok:
-            _clerk_jwks_cache = resp.json()
-        else:
-            logger.error(f"Failed to fetch Clerk JWKS: {resp.text}")
+            try:
+                url = "https://api.clerk.com/v1/jwks"
+                resp = requests.get(url, headers={"Authorization": f"Bearer {secret}"}, timeout=10)
+                if resp.ok:
+                    _clerk_jwks_cache = resp.json()
+                    return _clerk_jwks_cache
+            except Exception as e:
+                logger.warning(f"Clerk secret JWKS fetch failed: {e}")
+
+        try:
+            url = "https://driving-sailfish-11.clerk.accounts.dev/.well-known/jwks.json"
+            resp = requests.get(url, timeout=10)
+            if resp.ok:
+                _clerk_jwks_cache = resp.json()
+                return _clerk_jwks_cache
+        except Exception as e:
+            logger.error(f"Public Clerk JWKS fetch failed: {e}")
+
+        if _clerk_jwks_cache is None:
             raise Exception("Failed to fetch Clerk JWKS")
+
     return _clerk_jwks_cache
 
 def verify_clerk_token(token: str):
