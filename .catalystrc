@@ -1,0 +1,36 @@
+{
+  "defaults": {
+    "project": 1,
+    "env": 1
+  },
+  "actives": {
+    "project": 1,
+    "env": 1
+  },
+  "projects": [
+    {
+      "idx": 1,
+      "id": "54581000000018001",
+      "name": "Crime-Detection",
+      "domain": {
+        "id": "50044151710",
+        "name": "crime-detection-60076967629.development"
+      },
+      "timezone": "Asia/Kolkata",
+      "env": [
+        {
+          "idx": 1,
+          "id": "60076967629",
+          "name": "Development",
+          "type": 3
+        },
+        {
+          "idx": 2,
+          "id": "50044198704",
+          "name": "Production",
+          "type": 1
+        }
+      ]
+    }
+  ]
+}

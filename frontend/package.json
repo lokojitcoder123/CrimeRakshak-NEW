@@ -6,7 +6,7 @@
     "dev": "next dev",
     "dev:lowmem": "next dev --webpack",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p $X_ZOHO_CATALYST_LISTEN_PORT",
     "lint": "eslint"
   },
   "dependencies": {

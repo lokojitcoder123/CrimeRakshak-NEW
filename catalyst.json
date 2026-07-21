@@ -1,0 +1,12 @@
+{
+  "appsail": [
+    {
+      "source": "backend",
+      "name": "crimerakshak-api"
+    },
+    {
+      "source": "frontend",
+      "name": "crimerakshak-web"
+    }
+  ]
+}
