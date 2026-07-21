@@ -55,8 +55,17 @@ def _sanitize(sql: str) -> str:
 
 def run_query(sql: str, duckdb_path: str | None = None, max_rows: int = MAX_ROWS) -> QueryResult:
     """Validate and execute a read-only query; return capped, dict-shaped rows."""
+    import os
     safe_sql = _sanitize(sql)
     db_path = duckdb_path or settings.DUCKDB_PATH
+
+    if not os.path.exists(db_path):
+        from app.chat.data.loader import build_database
+        try:
+            build_database(duckdb_path=db_path)
+        except Exception as err:
+            from app.core.logging import get_logger
+            get_logger("query").error(f"Failed to auto-build DuckDB file: {err}")
 
     con = duckdb.connect(db_path, read_only=True)
     try:
