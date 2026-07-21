@@ -57,10 +57,28 @@ export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  let res = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  // Automatic retry loop to handle Render free-tier cold starts gracefully
+  let res: Response | null = null;
+  let lastError: any = null;
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      res = await fetch(`${API_BASE}${endpoint}`, {
+        ...options,
+        headers,
+      });
+      break;
+    } catch (err) {
+      lastError = err;
+      if (attempt < 3) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+      }
+    }
+  }
+
+  if (!res) {
+    throw lastError || new Error("Failed to reach API server");
+  }
 
   if (res.status === 401) {
     // Clear invalid token
