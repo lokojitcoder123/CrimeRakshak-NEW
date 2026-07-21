@@ -9,7 +9,7 @@
 		"NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL": "/",
 		"NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_ZHJpdmluZy1zYWlsZmlzaC0xMS5jbGVyay5hY2NvdW50cy5kZXYk",
 		"CLERK_SECRET_KEY": "",
-		"NEXT_PUBLIC_API_URL": "https://crimerakshak-api-50044207769.development.catalystappsail.in/api/v1"
+		"NEXT_PUBLIC_API_URL": "https://crimerakshak-new.onrender.com/api/v1"
 	},
 	"memory": 512,
 	"scripts": {}
