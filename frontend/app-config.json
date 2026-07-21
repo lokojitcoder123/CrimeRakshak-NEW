@@ -1,5 +1,5 @@
 {
-	"command": "node server.js",
+	"command": "npm install --production && node server.js",
 	"build_path": ".",
 	"stack": "node_18",
 	"env_variables": {
@@ -12,5 +12,7 @@
 		"NEXT_PUBLIC_API_URL": "https://crimerakshak-new.onrender.com/api/v1"
 	},
 	"memory": 512,
-	"scripts": {}
+	"scripts": {
+		"build": "npm install --production"
+	}
 }

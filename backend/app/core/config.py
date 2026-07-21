@@ -89,7 +89,7 @@ class Settings(BaseSettings):
 
     # ── CORS ──
     # Comma-separated list in the environment, e.g. "http://localhost:3000".
-    BACKEND_CORS_ORIGINS: Annotated[List[str], NoDecode] = ["http://localhost:3000"]
+    BACKEND_CORS_ORIGINS: Annotated[List[str], NoDecode] = ["*"]
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod

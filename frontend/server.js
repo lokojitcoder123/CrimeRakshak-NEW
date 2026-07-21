@@ -6,7 +6,7 @@ const next = require('next');
 const app = next({ dev: false });
 const handle = app.getRequestHandler();
 
-const port = parseInt(process.env.X_ZOHO_CATALYST_LISTEN_PORT || '9000', 10);
+const port = parseInt(process.env.X_ZOHO_CATALYST_LISTEN_PORT || process.env.PORT || '9000', 10);
 
 app.prepare().then(() => {
   createServer((req, res) => {
