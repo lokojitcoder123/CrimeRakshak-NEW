@@ -5,6 +5,9 @@ backend/.env
 # DuckDB build artifact (rebuild via python -m app.chat.data.loader)
 *.duckdb
 
+# Zip files
+*.zip
+
 # Generated conversation PDFs
 backend/exports/
 

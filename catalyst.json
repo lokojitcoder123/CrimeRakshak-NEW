@@ -5,24 +5,20 @@
       "name": "crimerakshak-api",
       "ignore": [
         "venv/",
-        "**/venv/**",
-        "backend/venv/**",
         ".venv/",
-        "**/__pycache__/**",
+        "ENV/",
         "__pycache__/",
         "*.pyc",
         "*.pyo",
-        "*.duckdb",
-        "exports/"
+        "exports/",
+        "logs/"
       ]
     },
     {
       "source": "frontend",
       "name": "crimerakshak-web",
       "ignore": [
-        "node_modules/",
-        "**/node_modules/**",
-        "frontend/node_modules/**"
+        "node_modules/"
       ]
     }
   ]

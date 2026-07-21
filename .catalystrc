@@ -9,6 +9,24 @@
   },
   "projects": [
     {
+      "idx": 2,
+      "id": "54581000000032003",
+      "name": "ciminal",
+      "domain": {
+        "id": "50044207769",
+        "name": "ciminal-60076967629.development"
+      },
+      "timezone": "Asia/Kolkata",
+      "env": [
+        {
+          "idx": 1,
+          "id": "60076967629",
+          "name": "Development",
+          "type": 3
+        }
+      ]
+    },
+    {
       "idx": 1,
       "id": "54581000000018001",
       "name": "Crime-Detection",
@@ -19,16 +37,24 @@
       "timezone": "Asia/Kolkata",
       "env": [
         {
-          "idx": 1,
-          "id": "60076967629",
-          "name": "Development",
-          "type": 3
-        },
-        {
           "idx": 2,
           "id": "50044198704",
           "name": "Production",
           "type": 1
+        },
+        {
+          "idx": 1,
+          "id": "60076967629",
+          "name": "Development",
+          "type": 3,
+          "env_status": "Active",
+          "project_details": {
+            "project_name": "Crime-Detection",
+            "id": "54581000000018001",
+            "project_type": "Live"
+          },
+          "is_default": false,
+          "action_required": false
         }
       ]
     }

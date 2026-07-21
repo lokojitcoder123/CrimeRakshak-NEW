@@ -223,23 +223,55 @@ def build_database(datasets_dir: str | None = None, duckdb_path: str | None = No
     db_path = duckdb_path or settings.DUCKDB_PATH
     labels: dict[str, dict[str, str]] = {}
 
-    con = duckdb.connect(db_path)
     try:
-        for ds in CATALOG:
-            try:
-                frame, label_map = _load_frame(ds, base)
-            except FileNotFoundError:
-                logger.warning("Dataset file missing, skipping: %s", ds.filename)
-                continue
-            con.register("_staging", frame)
-            con.execute(f'DROP TABLE IF EXISTS "{ds.table}"')
-            con.execute(f'CREATE TABLE "{ds.table}" AS SELECT * FROM _staging')
-            con.unregister("_staging")
-            labels[ds.table] = label_map
-            logger.info("Loaded %s -> table %s (%d rows)", ds.filename, ds.table, len(frame))
+        # Try read-write mode (default)
+        con = duckdb.connect(db_path)
+        is_read_only = False
+    except Exception as e:
+        # If read-write fails (e.g. read-only filesystem), fallback to read-only mode
+        logger.warning("Could not connect to DuckDB in read-write mode. Attempting read-only mode... Details: %s", e)
+        try:
+            con = duckdb.connect(db_path, read_only=True)
+            is_read_only = True
+        except Exception as read_err:
+            logger.error("Failed to connect to DuckDB even in read-only mode: %s", read_err)
+            raise
 
-        for table in _load_synthetic(con, base):
-            labels[table] = {}
+    try:
+        if is_read_only:
+            # If read-only, we don't try to drop/rebuild tables.
+            # Instead, we just read columns from existing tables so schema-card generation works.
+            logger.info("DuckDB is in read-only mode. Skipping database rebuild and reading existing schema.")
+            try:
+                # Query tables from duckdb
+                tables_res = con.execute("SHOW TABLES").fetchall()
+                for (table_name,) in tables_res:
+                    cols_res = con.execute(f"DESCRIBE {table_name}").fetchall()
+                    # cols_res: [(column_name, column_type, null, key, default, extra), ...]
+                    col_map = {}
+                    for row in cols_res:
+                        col_name = row[0]
+                        col_map[col_name] = col_name  # In read-only fallback, use column name as label
+                    labels[table_name] = col_map
+            except Exception as schema_err:
+                logger.error("Failed to read existing schema from read-only DuckDB: %s", schema_err)
+        else:
+            # Normal build path
+            for ds in CATALOG:
+                try:
+                    frame, label_map = _load_frame(ds, base)
+                except FileNotFoundError:
+                    logger.warning("Dataset file missing, skipping: %s", ds.filename)
+                    continue
+                con.register("_staging", frame)
+                con.execute(f'DROP TABLE IF EXISTS "{ds.table}"')
+                con.execute(f'CREATE TABLE "{ds.table}" AS SELECT * FROM _staging')
+                con.unregister("_staging")
+                labels[ds.table] = label_map
+                logger.info("Loaded %s -> table %s (%d rows)", ds.filename, ds.table, len(frame))
+
+            for table in _load_synthetic(con, base):
+                labels[table] = {}
     finally:
         con.close()
 

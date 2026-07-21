@@ -81,15 +81,33 @@ app.include_router(predict.router, prefix=settings.API_V1_PREFIX)
 
 # ── Lifecycle ─────────────────────────────────────────────────────────────
 @app.on_event("startup")
-def _startup_seed() -> None:
-    """Seed the database with default roles, permissions, and the superuser on startup."""
-    from app.seed import seed
-    try:
-        logger.info("Running automatic DB seeding on startup...")
-        seed()
-        logger.info("Automatic DB seeding completed.")
-    except Exception as e:
-        logger.error(f"Failed to auto-seed database: {e}")
+def _startup_init() -> None:
+    """Initialize DB tables & baseline seed asynchronously in background thread.
+
+    This ensures uvicorn binds to port 9000 immediately, satisfying Catalyst's
+    liveness health check without blocking on DB connection latency.
+    """
+    import threading
+
+    def _bg_init():
+        try:
+            from app.core.database import engine, Base
+            import app.models.rbac  # noqa: F401
+            logger.info("Creating database tables if they do not exist...")
+            Base.metadata.create_all(bind=engine)
+            logger.info("Database tables ready.")
+        except Exception as e:
+            logger.error(f"Failed to create database tables: {e}")
+
+        try:
+            from app.seed import seed
+            logger.info("Running automatic DB seeding...")
+            seed()
+            logger.info("Automatic DB seeding completed.")
+        except Exception as e:
+            logger.error(f"Failed to auto-seed database: {e}")
+
+    threading.Thread(target=_bg_init, daemon=True).start()
 
 
 @app.on_event("shutdown")

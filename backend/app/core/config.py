@@ -75,7 +75,10 @@ class Settings(BaseSettings):
 
     # ── CSV analytics (DuckDB) ──
     # Directory holding the KSP CSV datasets and the on-disk DuckDB file.
-    DATASETS_DIR: str = "../datasets"
+    # On Zoho Catalyst the datasets/ folder is bundled at the app root, so
+    # the relative path is simply "datasets" (NOT "../datasets" which only
+    # works for local development where datasets/ is one level above backend/).
+    DATASETS_DIR: str = "datasets"
     DUCKDB_PATH: str = "crime_stats.duckdb"
 
     # ── Security policy ──
@@ -101,12 +104,17 @@ class Settings(BaseSettings):
         uri = self.POSTGRES_URI
         if uri.startswith("postgresql://"):
             uri = uri.replace("postgresql://", "postgresql+psycopg2://", 1)
-        
-        # Remove pgbouncer=true because psycopg2 doesn't support it in the DSN
+
+        # Remove parameters psycopg2 doesn't support in the DSN
+        # pgbouncer=true — pooler hint, not a valid libpq parameter
         uri = uri.replace("?pgbouncer=true&", "?")
         uri = uri.replace("?pgbouncer=true", "")
         uri = uri.replace("&pgbouncer=true", "")
-        
+        # channel_binding=require — Neon/pg16 feature not supported by psycopg2 DSN parser
+        uri = uri.replace("?channel_binding=require&", "?")
+        uri = uri.replace("?channel_binding=require", "")
+        uri = uri.replace("&channel_binding=require", "")
+
         return uri
 
 

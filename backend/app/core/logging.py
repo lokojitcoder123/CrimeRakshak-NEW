@@ -22,14 +22,19 @@ def get_logger(name: str = "app") -> logging.Logger:
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
 
-        log_dir = os.path.join(os.path.dirname(__file__), "..", "..", "logs")
-        os.makedirs(log_dir, exist_ok=True)
-        file_handler = RotatingFileHandler(
-            os.path.join(log_dir, "api.log"),
-            maxBytes=5 * 1024 * 1024,
-            backupCount=3,
-        )
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
+        try:
+            log_dir = os.path.join(os.path.dirname(__file__), "..", "..", "logs")
+            os.makedirs(log_dir, exist_ok=True)
+            file_handler = RotatingFileHandler(
+                os.path.join(log_dir, "api.log"),
+                maxBytes=5 * 1024 * 1024,
+                backupCount=3,
+            )
+            file_handler.setFormatter(formatter)
+            logger.addHandler(file_handler)
+        except Exception as e:
+            # On read-only containers (like Catalyst AppSail), file logging will fail.
+            # We fallback silently to console logging (stdout), which is automatically collected by Catalyst logs.
+            logger.warning(f"Could not initialize file logging (filesystem may be read-only): {e}")
 
     return logger
