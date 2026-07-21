@@ -2,11 +2,28 @@
   "appsail": [
     {
       "source": "backend",
-      "name": "crimerakshak-api"
+      "name": "crimerakshak-api",
+      "ignore": [
+        "venv/",
+        "**/venv/**",
+        "backend/venv/**",
+        ".venv/",
+        "**/__pycache__/**",
+        "__pycache__/",
+        "*.pyc",
+        "*.pyo",
+        "*.duckdb",
+        "exports/"
+      ]
     },
     {
       "source": "frontend",
-      "name": "crimerakshak-web"
+      "name": "crimerakshak-web",
+      "ignore": [
+        "node_modules/",
+        "**/node_modules/**",
+        "frontend/node_modules/**"
+      ]
     }
   ]
 }
