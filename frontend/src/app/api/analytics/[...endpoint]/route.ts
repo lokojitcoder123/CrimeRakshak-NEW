@@ -6,7 +6,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://127.0.0.1:8001";
+const getBackendUrl = () => {
+  const url = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "https://crimerakshak-new.onrender.com";
+  return url.replace(/\/api\/v1\/?$/, "");
+};
+
+const BACKEND_URL = getBackendUrl();
 
 
 export async function GET(
