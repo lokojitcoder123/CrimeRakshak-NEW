@@ -194,14 +194,19 @@ SYNTHETIC_TABLES: tuple[tuple[str, str], ...] = (
 
 def _load_synthetic(con: duckdb.DuckDBPyConnection, base: Path) -> list[str]:
     synth_dir = base / "synthetic_cases"
+    if not synth_dir.exists() or not (synth_dir / "case_people.csv").exists():
+        try:
+            from app.chat.data.case_generator import generate
+            logger.info("Synthetic dataset missing — auto-generating synthetic cases into %s...", synth_dir)
+            generate(out_dir=synth_dir)
+        except Exception as e:
+            logger.error("Failed to auto-generate synthetic cases: %s", e)
+
     loaded: list[str] = []
     for table, filename in SYNTHETIC_TABLES:
         path = synth_dir / filename
         if not path.exists():
-            logger.warning(
-                "Synthetic file missing, skipping: %s (run python -m "
-                "app.chat.data.case_generator first)", path,
-            )
+            logger.warning("Synthetic file missing, skipping: %s", path)
             continue
         frame = pd.read_csv(path)
         con.register("_staging", frame)
