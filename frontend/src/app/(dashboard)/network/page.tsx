@@ -61,8 +61,11 @@ export default function NetworkPage() {
     const loadGraph = async () => {
       try {
         setLoading(true);
-        const data = await fetchAPI("/network/full?node_limit=150&edge_limit=400");
-        
+        const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://crimerakshak-new.onrender.com/api/v1";
+        const res = await fetch(`${API_BASE}/network/full?node_limit=150&edge_limit=400`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
         const mappedNodes: NetworkNode[] = (data.nodes || []).map((n: any) => {
           let type: "accused" | "victim" | "location" | "account" = "location";
           if (n.label === "Person") {

@@ -107,6 +107,22 @@ def _startup_init() -> None:
         except Exception as e:
             logger.error(f"Failed to auto-seed database: {e}")
 
+        try:
+            import os
+            from app.core.config import settings
+            duckdb_path = settings.DUCKDB_PATH
+            if not os.path.exists(duckdb_path):
+                logger.info("DuckDB file missing, building from datasets + generating synthetic cases...")
+                from app.chat.data.case_generator import generate
+                generate()
+                from app.chat.data.loader import build_database
+                build_database()
+                logger.info("DuckDB database built successfully.")
+            else:
+                logger.info("DuckDB file found at %s, skipping build.", duckdb_path)
+        except Exception as e:
+            logger.error(f"Failed to build DuckDB database on startup: {e}")
+
     threading.Thread(target=_bg_init, daemon=True).start()
 
 

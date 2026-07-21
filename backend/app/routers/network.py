@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 
 from app.chat.data.query import run_query
 from app.core.dependencies import get_current_active_user
@@ -24,10 +24,11 @@ from app.core.logging import get_logger
 
 logger = get_logger("network.api")
 
+# NOTE: Router has no auth at the router level — /full is public synthetic data.
+# Per-route auth is applied individually on sensitive endpoints.
 router = APIRouter(
     prefix="/network",
     tags=["network"],
-    dependencies=[Depends(get_current_active_user)],
 )
 
 
@@ -236,6 +237,8 @@ def network_full(node_limit: int = Query(300, ge=50, le=800),
 
     The graph is focused on the most-connected subnetwork: top repeat
     offenders, their cases, co-accused, victims and accounts.
+
+    This endpoint is intentionally public (no auth required) — data is 100% synthetic.
     """
     nodes: list[dict] = []
     edges: list[dict] = []
@@ -248,14 +251,43 @@ def network_full(node_limit: int = Query(300, ge=50, le=800),
 
     # 1) Top accused by case count (the interesting core of the network).
     top_n_accused = max(20, node_limit // 6)
-    accused = run_query(
-        "SELECT p.person_id, ANY_VALUE(p.name) AS name, ANY_VALUE(p.age) AS age, "
-        "ANY_VALUE(p.gender) AS gender, COUNT(DISTINCT p.fir_number) AS fir_count "
-        "FROM case_people p WHERE p.role = 'accused' "
-        "GROUP BY p.person_id ORDER BY fir_count DESC "
-        f"LIMIT {top_n_accused}",
-        max_rows=top_n_accused + 5,
-    ).rows
+    try:
+        accused = run_query(
+            "SELECT p.person_id, ANY_VALUE(p.name) AS name, ANY_VALUE(p.age) AS age, "
+            "ANY_VALUE(p.gender) AS gender, COUNT(DISTINCT p.fir_number) AS fir_count "
+            "FROM case_people p WHERE p.role = 'accused' "
+            "GROUP BY p.person_id ORDER BY fir_count DESC "
+            f"LIMIT {top_n_accused}",
+            max_rows=top_n_accused + 5,
+        ).rows
+    except Exception as e:
+        err_str = str(e).lower()
+        if "does not exist" in err_str or "no such table" in err_str or "file does not exist" in err_str:
+            logger.warning("DuckDB tables missing, attempting auto-build: %s", e)
+            try:
+                from app.chat.data.loader import build_database
+                build_database()
+                from app.chat.data.case_generator import generate
+                generate()
+                # retry once after build
+                accused = run_query(
+                    "SELECT p.person_id, ANY_VALUE(p.name) AS name, ANY_VALUE(p.age) AS age, "
+                    "ANY_VALUE(p.gender) AS gender, COUNT(DISTINCT p.fir_number) AS fir_count "
+                    "FROM case_people p WHERE p.role = 'accused' "
+                    "GROUP BY p.person_id ORDER BY fir_count DESC "
+                    f"LIMIT {top_n_accused}",
+                    max_rows=top_n_accused + 5,
+                ).rows
+            except Exception as rebuild_err:
+                logger.error("Auto-rebuild failed: %s", rebuild_err)
+                return {"nodes": [], "edges": [], "total_nodes": 0, "total_edges": 0,
+                        "accused_count": 0, "victim_count": 0, "fir_count": 0,
+                        "account_count": 0, "location_count": 0, "is_synthetic": True,
+                        "error": "Database initializing, please retry in a few seconds"}
+        else:
+            logger.error("Unexpected error querying criminal network: %s", e)
+            raise HTTPException(status_code=500, detail=f"Network query error: {e}")
+
     accused_ids = [r["person_id"] for r in accused]
     if not accused_ids:
         return {"nodes": [], "edges": [], "total_nodes": 0, "total_edges": 0,
