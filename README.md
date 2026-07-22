@@ -1,140 +1,206 @@
 # 🔍 CrimeRakshak
 
-> **Intelligent Conversational AI Platform for Karnataka State Police (KSP) Crime Database**
+> **Intelligent Conversational AI & Graph Analytics Platform for Karnataka State Police (KSP)**
 
-CrimeRakshak is a full-stack crime intelligence platform that enables police investigators to query, visualize, and analyze crime data through natural language conversations, graph-based criminal network analysis, financial crime tracing, and AI-powered predictive forecasting — all secured by role-based access control.
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
+[![Next.js](https://img.shields.io/badge/Next.js-16.0-000000.svg?style=flat&logo=next.js)](https://nextjs.org)
+[![Python](https://img.shields.io/badge/Python-3.9+-3776AB.svg?style=flat&logo=python)](https://python.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6.svg?style=flat&logo=typescript)](https://www.typescriptlang.org/)
+[![Neo4j](https://img.shields.io/badge/Neo4j-5.x-008CC1.svg?style=flat&logo=neo4j)](https://neo4j.com)
+[![DuckDB](https://img.shields.io/badge/DuckDB-1.0+-FFF000.svg?style=flat&logo=duckdb)](https://duckdb.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-4169E1.svg?style=flat&logo=postgresql)](https://postgresql.org)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-38B2AC.svg?style=flat&logo=tailwind-css)](https://tailwindcss.com)
+
+---
+
+CrimeRakshak is an enterprise-grade crime intelligence and investigation platform designed for police departments and law enforcement agencies. It fuses **Conversational AI (LLM)**, **Neo4j Graph Database analytics**, **DuckDB in-memory OLAP analytics**, and **Machine Learning forecasting (XGBoost / ARIMA)** to empower investigators to query crime records in natural language (English & Kannada), map complex criminal networks, trace illicit financial flows, and predict crime hotspots.
 
 ---
 
 ## 📋 Table of Contents
 
-- [Features](#-features)
-- [Architecture](#-architecture)
-- [Tech Stack](#-tech-stack)
-- [Project Structure](#-project-structure)
-- [API Reference](#-api-reference)
-- [Environment Variables](#-environment-variables)
-- [Local Development Setup](#-local-development-setup)
-- [Database Setup](#-database-setup)
-- [Deployment](#-deployment)
+- [✨ Features](#-features)
+- [🏗️ Architecture & Pipeline](#️-architecture--pipeline)
+  - [System Architecture](#system-architecture)
+  - [Data Processing Pipeline](#data-processing-pipeline)
+  - [Conversational AI Data Flow](#conversational-ai-data-flow)
+- [🛠️ Tech Stack](#️-tech-stack)
+- [📁 Project Structure](#-project-structure)
+- [🔌 API Reference](#-api-reference)
+- [🤖 AI Tool-Calling System](#-ai-tool-calling-system)
+- [🔑 Environment Variables](#-environment-variables)
+- [💻 Local Development Setup](#-local-development-setup)
+- [🗄️ Database Setup & Ingestion](#️-database-setup--ingestion)
+- [🚀 Deployment](#-deployment)
+- [🔐 Security Design & Compliance](#-security-design--compliance)
+- [📝 License](#-license)
 
 ---
 
 ## ✨ Features
 
-| Feature | Description |
+| Feature | Details |
 |---|---|
-| 🤖 **Conversational AI** | Natural language Q&A over KSP crime data in **English and Kannada**, powered by LLMs (OpenRouter / Gemini). Grounded answers with source citations. |
-| 🕸️ **Criminal Network Graph** | Visualize criminal relationships — accused, victims, witnesses, FIRs, phone numbers, bank accounts — using an interactive force-directed graph. |
-| 💰 **Financial Crime Analysis** | Money trail tracing, circular flow detection, suspicious transaction patterns, and multi-hop account link analysis. |
-| 📊 **Crime Analytics Dashboard** | District-level statistics, crime trends, disposal analysis, heatmaps, and type-wise breakdowns powered by DuckDB. |
-| 🔮 **AI Prediction & Forecasting** | XGBoost + ARIMA + Scikit-learn models for early-warning crime forecasting and hotspot prediction. |
-| 🔐 **Auth & RBAC** | JWT-based authentication with refresh token rotation, role-based access control, account lockout, and audit logging. |
-| 🌐 **Multilingual Support** | Kannada ⇄ English translation for chat queries and responses. |
-| 📄 **PDF Export** | Download full conversation transcripts (with Kannada font support) as PDF reports. |
+| 🤖 **Bilingual Conversational AI** | Natural language Q&A over KSP crime database in **English & Kannada** powered by tool-calling LLMs (OpenRouter / Gemini) with grounded answers and source citations. |
+| 🕸️ **Interactive Criminal Networks** | Dynamic 2D/3D force-directed graph visualization of offenders, victims, witnesses, FIRs, phone numbers, and bank accounts using Neo4j. |
+| 💰 **Financial Crime & Money Trail** | Multi-hop fund flow tracing, circular transaction loop detection, shell account pass-through detection, and suspicious activity flagging. |
+| 📊 **High-Performance Analytics** | Instant aggregation over millions of crime records, district reviews, disposal stats, and crime trends using embedded DuckDB OLAP. |
+| 🔮 **Predictive Crime Intelligence** | ML forecasting engine using **XGBoost + ARIMA** to predict regional crime trends, seasonal spikes, and hotspot vulnerabilities. |
+| 🔐 **Enterprise Auth & RBAC** | Fine-grained Role-Based Access Control (RBAC), JWT authentication with single-use refresh token rotation, account lockout, and full audit logging. |
+| 🌐 **Kannada Translation Engine** | Real-time Kannada ⇄ English neural translation for chat queries and investigative responses. |
+| 📄 **Investigative PDF Reports** | Generate exportable, audit-ready PDF conversation transcripts formatted with Unicode font rendering for Kannada script. |
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Architecture & Pipeline
+
+### System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                          CLIENT BROWSER                             │
-│                     Next.js 16 + React 19                           │
-│         (Dashboard · Chat · Network · Analytics · Heatmap)          │
-└────────────────────────────┬────────────────────────────────────────┘
-                             │  HTTPS REST
-                             ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                       BACKEND API LAYER                             │
-│                   FastAPI (Python 3.9+) · Uvicorn                   │
-│                                                                     │
-│  ┌─────────────┐  ┌──────────────┐  ┌────────────┐  ┌──────────┐  │
-│  │  Auth/RBAC  │  │  Chat/AI     │  │   Graph    │  │Financial │  │
-│  │   Module    │  │   Module     │  │  Module    │  │  Module  │  │
-│  │             │  │              │  │            │  │          │  │
-│  │ JWT · Roles │  │ LLM Agent    │  │ Cypher     │  │ Money    │  │
-│  │ Audit Logs  │  │ Tool-calling │  │ Traversal  │  │ Trail    │  │
-│  └──────┬──────┘  └──────┬───────┘  └─────┬──────┘  └────┬─────┘  │
-└─────────┼────────────────┼────────────────┼───────────────┼────────┘
-          │                │                │               │
-    ┌─────▼──────┐  ┌──────▼──────┐  ┌──────▼───────────────▼──────┐
-    │ PostgreSQL │  │   DuckDB    │  │          Neo4j               │
-    │  (Neon)    │  │ (Analytics) │  │   (Graph Database - AuraDB)  │
-    │ Users/RBAC │  │ Crime Stats │  │ Persons · FIRs · Crimes ·    │
-    │ Audit Logs │  │ CSV Tables  │  │ Accounts · Transactions      │
-    └────────────┘  └─────────────┘  └──────────────────────────────┘
-          │
-    ┌─────▼──────────────────────────────────────┐
-    │       External AI Providers                │
-    │  OpenRouter API · Google Gemini API        │
-    │  (LLM inference for chat + forecasting)    │
-    └────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                             CLIENT PRESENTATION LAYER                       │
+│                        Next.js 16 (App Router) + React 19                   │
+│        (Crime Dashboard · AI Assistant · Network Graph · Heatmaps)          │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │ HTTPS / REST (JWT Auth)
+                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          FASTAPI BACKEND SERVICE LAYER                      │
+│                                Python 3.9+ · Uvicorn                        │
+│                                                                             │
+│  ┌────────────────┐   ┌─────────────────┐   ┌────────────────────────────┐  │
+│  │ Auth & RBAC    │   │ Conversational  │   │ Graph Intelligence         │  │
+│  │ JWT · Sessions │   │ AI Agent Loop   │   │ Cypher Traversal           │  │
+│  │ Audit Logs     │   │ 9-Tool Registry │   │ Union-Find Communities     │  │
+│  └───────┬────────┘   └────────┬────────┘   └─────────────┬──────────────┘  │
+│          │                     │                          │                 │
+│  ┌───────┴────────┐   ┌────────┴────────┐   ┌─────────────┴──────────────┐  │
+│  │ ML Predictor   │   │ Analytics Engine│   │ Financial Crime            │  │
+│  │ XGBoost/ARIMA  │   │ DuckDB Execution│   │ Money Trail Tracing        │  │
+│  └────────────────┘   └─────────────────┘   └────────────────────────────┘  │
+└──────────┬─────────────────────┬──────────────────────────┬─────────────────┘
+           │                     │                          │
+     ┌─────▼──────┐        ┌─────▼──────┐             ┌─────▼───────────────────┐
+     │ PostgreSQL │        │   DuckDB   │             │      Neo4j Graph        │
+     │   (Neon)   │        │(Analytics) │             │     (AuraDB 5.x)        │
+     │ Users/RBAC │        │ Crime CSV  │             │ Criminal Networks &     │
+     │ Audit Logs │        │ Statistics │             │ Financial Transactions  │
+     └────────────┘        └────────────┘             └─────────────────────────┘
+           │
+     ┌─────▼────────────────────────────────────────┐
+     │           External LLM Services              │
+     │   OpenRouter API / Google Gemini API         │
+     │   (Function calling & answer generation)     │
+     └──────────────────────────────────────────────┘
 ```
 
-### Data Flow — Conversational AI
+### Data Processing Pipeline
+
+The CrimeRakshak platform functions across 5 integrated operational stages:
+
+```mermaid
+flowchart TD
+    subgraph Stage1["1. Data Ingestion & Storage"]
+        RawCSV[KSP Crime Datasets] --> Loader[Ingestion Pipeline]
+        Loader -->|Structured Records| PG[(PostgreSQL - Neon)]
+        Loader -->|Pre-aggregated Stats| DDB[(DuckDB OLAP Engine)]
+        Loader -->|Node & Edge Relations| N4J[(Neo4j Graph Database)]
+    end
+
+    subgraph Stage2["2. Graph & Analytics Processing"]
+        N4J -->|Cypher Queries| GraphEngine[Graph Service]
+        DDB -->|Vectorized SQL| AnalyticsEngine[Analytics Service]
+        GraphEngine -->|Community Detection| UF[Union-Find Co-offenders]
+        AnalyticsEngine -->|Trend Extraction| ML[XGBoost / ARIMA Engine]
+    end
+
+    subgraph Stage3["3. AI Reasoning & Tool Calling"]
+        UserMsg[User Query] --> Translator{Language Check}
+        Translator -->|Kannada| ENTrans[KN → EN Translation]
+        Translator -->|English| Agent[Tool-Calling LLM Agent]
+        ENTrans --> Agent
+        Agent <-->|Execute Tools| Tools[9 System Tools]
+        Tools <--> GraphEngine
+        Tools <--> AnalyticsEngine
+    end
+
+    subgraph Stage4["4. Synthesis & Security Control"]
+        Agent -->|Synthesized Data| Guard[SELECT-only & Audit Guardrail]
+        Guard --> Audit[(PostgreSQL Audit Log)]
+        Guard --> ResTrans{Target Language}
+        ResTrans -->|Kannada| KNTrans[EN → KN Translation]
+        ResTrans -->|English| FinalAns[Final Grounded Answer]
+        KNTrans --> FinalAns
+    end
+
+    subgraph Stage5["5. UI Presentation & Export"]
+        FinalAns --> WebApp[Next.js Dashboard & Chat UI]
+        FinalAns --> PDFGen[ReportLab PDF Engine]
+    end
+```
+
+### Conversational AI Data Flow
 
 ```
-User Message (EN / KN)
-        │
-        ▼
-[KN→EN Translation]  (deep-translator)
-        │
-        ▼
-Tool-Calling LLM Agent  (OpenRouter / Gemini)
-  ├── query_crime_stats          → DuckDB (real CSV stats)
-  ├── district_review_summary    → DuckDB
-  ├── rising_crimes              → DuckDB
-  ├── crime_trend                → DuckDB
-  ├── disposal_analysis          → DuckDB
-  ├── case_summary               → Neo4j
-  ├── investigation_timeline     → Neo4j
-  ├── similar_cases              → Neo4j
-  └── suggest_leads              → Neo4j
-        │
-        ▼
-Grounded Answer + Sources (query citations for explainability)
-        │
-        ▼
-[EN→KN Translation]  (if requested)
-        │
-        ▼
-Response + Optional PDF Export
+User Query (EN / KN)
+       │
+       ▼
+[Deep-Translator Module] ──► Standardized English Prompt
+       │
+       ▼
+[LLM Agent (Gemini / OpenRouter)]
+       │
+       ├──► Call query_crime_stats()         ──► Query DuckDB
+       ├──► Call district_review_summary()   ──► Query DuckDB
+       ├──► Call rising_crimes()             ──► Query DuckDB
+       ├──► Call crime_trend()               ──► Query DuckDB
+       ├──► Call disposal_analysis()         ──► Query DuckDB
+       ├──► Call case_summary()              ──► Query Neo4j
+       ├──► Call investigation_timeline()    ──► Query Neo4j
+       ├──► Call similar_cases()             ──► Query Neo4j
+       └──► Call suggest_leads()             ──► Query Neo4j
+       │
+       ▼
+[Structured Output Synthesis] ──► Cites exact data sources for verification
+       │
+       ▼
+[Language Translator] ──► Formats to target language (English/Kannada)
+       │
+       ▼
+Response rendered in Next.js UI + Available for PDF Download
 ```
 
 ---
 
 ## 🛠️ Tech Stack
 
-### Backend
+### Backend Technologies
 
-| Layer | Technology |
-|---|---|
-| **Runtime** | Python 3.9+ |
-| **API Framework** | FastAPI 0.110+ with Uvicorn |
-| **ORM** | SQLAlchemy 2.0 + Alembic (migrations) |
-| **Auth** | JWT (python-jose) · bcrypt (passlib) · Clerk Backend SDK |
-| **AI / LLM** | OpenRouter API · Google Gemini API (OpenAI-compatible client) |
-| **Analytical DB** | DuckDB 1.0+ (embedded, CSV-backed crime statistics) |
-| **Graph DB** | Neo4j 5.x AuraDB (criminal networks + financial transactions) |
-| **Relational DB** | PostgreSQL via Neon (users, RBAC tables, audit logs) |
-| **ML / Forecasting** | Scikit-learn · XGBoost · Statsmodels (ARIMA) |
-| **Translation** | deep-translator (Kannada ⇄ English) |
-| **PDF Generation** | ReportLab (Unicode / Kannada font support) |
-| **Validation** | Pydantic v2 + pydantic-settings |
+| Component | Stack | Purpose |
+|---|---|---|
+| **Runtime** | Python 3.9+ | Main application execution environment |
+| **Framework** | FastAPI 0.110+ | High-performance asynchronous REST API framework |
+| **Server** | Uvicorn / Gunicorn | ASGI web server for production deployment |
+| **Relational Database** | PostgreSQL (Neon Cloud) | Manages authentication, RBAC, user profiles, and security audit logs |
+| **Graph Database** | Neo4j 5.x (AuraDB) | Stores criminal network graphs, FIR linkages, entity relationships, and fund flows |
+| **Analytical Engine** | DuckDB 1.0+ | Fast in-memory OLAP SQL engine over large crime CSV datasets |
+| **AI & LLM Services** | OpenRouter / Google Gemini | Powering tool-calling conversational agent & text summarization |
+| **Machine Learning** | Scikit-learn, XGBoost, Statsmodels | Time-series forecasting, trend projections, and crime hotspot detection |
+| **ORM & Migrations** | SQLAlchemy 2.0 & Alembic | Schema definition and database migration versioning |
+| **Security & Auth** | JWT (`python-jose`), `bcrypt`, `passlib` | Secure password hashing, token generation, and RBAC middleware |
+| **PDF Generation** | ReportLab | Generates PDF transcripts supporting Unicode and Noto Sans Kannada fonts |
 
-### Frontend
+### Frontend Technologies
 
-| Layer | Technology |
-|---|---|
-| **Framework** | Next.js 16 (App Router) + React 19 |
-| **Language** | TypeScript 5 |
-| **Styling** | Tailwind CSS 4 + shadcn/ui |
-| **Animations** | Framer Motion |
-| **Charts** | Recharts |
-| **Graph Visualization** | react-force-graph-2d + d3-force-3d |
-| **Authentication** | Clerk (`@clerk/nextjs`) |
-| **Icons** | Lucide React |
+| Component | Stack | Purpose |
+|---|---|---|
+| **Framework** | Next.js 16 (App Router) | React framework providing SSR, API routing, and optimized builds |
+| **UI Library** | React 19 + TypeScript 5 | Component-driven frontend architecture with static typing |
+| **Styling** | Tailwind CSS 4 + shadcn/ui | Modern utility-first styling system and polished UI primitives |
+| **Network Visualization** | `react-force-graph-2d` / `d3-force-3d` | Interactive 2D/3D physics-based criminal network graph renderer |
+| **Data Visualization** | Recharts | Interactive bar, line, pie, and area charts for crime statistics |
+| **Authentication** | Clerk (`@clerk/nextjs`) | Authentication provider integration with Next.js middleware |
+| **Icons & Animations** | Lucide React & Framer Motion | Dynamic icons and fluid UI layout transitions |
 
 ---
 
@@ -142,226 +208,245 @@ Response + Optional PDF Export
 
 ```
 CrimeRakshak/
-├── backend/                        # FastAPI Python backend
+├── backend/                            # FastAPI Python backend application
 │   ├── app/
-│   │   ├── main.py                 # App entrypoint, CORS, router wiring
-│   │   ├── seed.py                 # Baseline roles/permissions/superuser seed
-│   │   ├── core/
-│   │   │   ├── config.py           # pydantic-settings (env-driven config)
-│   │   │   ├── database.py         # PostgreSQL engine + session
-│   │   │   ├── security.py         # bcrypt hashing + JWT encode/decode
-│   │   │   ├── dependencies.py     # Auth middleware, RBAC guards
-│   │   │   ├── exceptions.py       # Typed HTTP errors
-│   │   │   └── logging.py          # Rotating file + console logger
-│   │   ├── models/rbac.py          # User, Role, Permission, AuditLog models
-│   │   ├── schemas/                # Pydantic request/response models
-│   │   ├── services/               # auth_service, rbac_service, audit
-│   │   ├── routers/
-│   │   │   ├── auth.py             # /auth/* endpoints
-│   │   │   ├── admin.py            # /admin/* endpoints (RBAC management)
-│   │   │   ├── analytics.py        # /analytics/* endpoints (DuckDB)
-│   │   │   ├── network.py          # /network/* endpoints
-│   │   │   ├── predict.py          # /predict/* endpoints (ML forecasting)
-│   │   │   └── protected.py        # Protected placeholder routes
-│   │   ├── chat/                   # Conversational AI module
-│   │   │   ├── agent.py            # Tool-calling LLM loop + conversation memory
-│   │   │   ├── tools.py            # 9-tool registry + dispatch
-│   │   │   ├── graph_tools.py      # Neo4j case-level tools
-│   │   │   ├── decision_tools.py   # DuckDB analytics tools
-│   │   │   ├── llm.py              # OpenRouter / Gemini client
-│   │   │   ├── translate.py        # Kannada ⇄ English
-│   │   │   ├── pdf.py              # Transcript → PDF
-│   │   │   ├── router.py           # /chat/* FastAPI routes
-│   │   │   └── data/               # CSV → DuckDB loader, schema card, query executor
-│   │   ├── graph/                  # Criminal network graph module
-│   │   │   ├── connection.py       # Neo4j lazy singleton driver
-│   │   │   ├── repositories/       # Parameterized Cypher catalog
-│   │   │   ├── services/           # Graph traversal + union-find grouping
-│   │   │   └── routers/            # /graph/* REST endpoints
-│   │   ├── financial/              # Financial crime module
-│   │   │   ├── repositories/       # Financial Cypher catalog
-│   │   │   ├── services/           # Money trail + circular flow detection
-│   │   │   └── routers/            # /financial/* REST endpoints
-│   │   └── ml/                     # ML forecasting module
-│   │       ├── dataset.py          # Feature engineering
-│   │       ├── engines.py          # XGBoost + ARIMA engines
-│   │       └── forecast.py         # Forecast pipeline
-│   ├── alembic/                    # DB migration scripts
-│   ├── ingestion/                  # KSP data ingestion pipeline
-│   ├── datasets/                   # Raw CSV crime statistics
-│   ├── requirements.txt            # Python dependencies
-│   └── run.py                      # Production entrypoint (Uvicorn)
+│   │   ├── main.py                     # FastAPI entrypoint, middleware, and CORS configuration
+│   │   ├── seed.py                     # Initial seed for roles, permissions, and superuser
+│   │   ├── core/                       # Core system utilities
+│   │   │   ├── config.py               # Application settings driven by pydantic-settings
+│   │   │   ├── database.py             # PostgreSQL SQLAlchemy engine and session dependency
+│   │   │   ├── security.py             # Password hashing (bcrypt) and JWT encoding/decoding
+│   │   │   ├── dependencies.py         # Authentication dependencies and RBAC permission guards
+│   │   │   ├── exceptions.py           # Custom typed HTTP error handlers
+│   │   │   └── logging.py              # Structured application logger
+│   │   ├── models/
+│   │   │   └── rbac.py                 # SQLAlchemy ORM models (User, Role, Permission, AuditLog)
+│   │   ├── schemas/                    # Pydantic validation models for requests/responses
+│   │   ├── services/                   # Business logic (auth_service, rbac_service, audit_service)
+│   │   ├── routers/                    # REST API endpoint modules
+│   │   │   ├── auth.py                 # User authentication (/auth)
+│   │   │   ├── admin.py                # System administration and RBAC management (/admin)
+│   │   │   ├── analytics.py            # Aggregated analytics endpoints via DuckDB (/analytics)
+│   │   │   ├── network.py              # Criminal network endpoints (/network)
+│   │   │   ├── predict.py              # ML predictive forecasting (/predict)
+│   │   │   └── protected.py            # Access-controlled route examples
+│   │   ├── chat/                       # Conversational AI & NLP module
+│   │   │   ├── agent.py                # Conversational LLM loop with tool dispatch & memory
+│   │   │   ├── tools.py                # Unified tool registry
+│   │   │   ├── graph_tools.py          # Neo4j query tools for case investigation
+│   │   │   ├── decision_tools.py       # DuckDB analytical tools for aggregate statistics
+│   │   │   ├── llm.py                  # OpenRouter & Gemini LLM client abstraction
+│   │   │   ├── translate.py            # Deep-Translator integration (Kannada ⇄ English)
+│   │   │   ├── pdf.py                  # ReportLab transcript export service
+│   │   │   ├── router.py               # Chat REST endpoints (/chat)
+│   │   │   └── data/                   # Data loader, schema cards, and query executor
+│   │   ├── graph/                      # Neo4j Criminal Network module
+│   │   │   ├── connection.py           # Lazy singleton Neo4j driver connection manager
+│   │   │   ├── repositories/           # Parameterized Cypher query catalog
+│   │   │   ├── services/               # Graph traversal algorithms and community detection
+│   │   │   └── routers/                # Graph REST API endpoints (/graph)
+│   │   ├── financial/                  # Financial Crime module
+│   │   │   ├── repositories/           # Financial Cypher queries (accounts & transactions)
+│   │   │   ├── services/               # Fund tracing, circular flow, pass-through algorithms
+│   │   │   └── routers/                # Financial crime endpoints (/financial)
+│   │   └── ml/                         # Machine Learning forecasting module
+│   │       ├── dataset.py              # Feature engineering & dataset preparation
+│   │       ├── engines.py              # XGBoost & ARIMA model wrappers
+│   │       └── forecast.py             # Forecast execution pipeline
+│   ├── alembic/                        # Database migration scripts
+│   ├── datasets/                       # Local raw crime dataset CSV storage
+│   ├── requirements.txt                # Python backend dependencies
+│   └── run.py                          # Application startup script
 │
-├── frontend/                       # Next.js React frontend
+├── frontend/                           # Next.js React frontend web application
 │   ├── src/
 │   │   ├── app/
-│   │   │   ├── (dashboard)/        # Protected dashboard pages
-│   │   │   │   ├── overview/       # Crime overview & KPIs
-│   │   │   │   ├── ai-assistant/   # Conversational AI chat
-│   │   │   │   ├── network/        # Criminal network graph
-│   │   │   │   ├── heatmap/        # Crime heatmap
-│   │   │   │   ├── trends/         # Trend analysis
-│   │   │   │   ├── financial/      # Financial crime
-│   │   │   │   ├── ai-prediction/  # ML predictions
-│   │   │   │   ├── case-intel/     # Case intelligence
-│   │   │   │   ├── profiling/      # Criminal profiling
-│   │   │   │   ├── district/       # District analysis
-│   │   │   │   ├── crime-types/    # Crime type breakdown
-│   │   │   │   ├── alerts/         # Alert management
-│   │   │   │   ├── governance/     # Governance metrics
-│   │   │   │   ├── vulnerable/     # Vulnerable area analysis
-│   │   │   │   ├── explainability/ # AI explainability view
-│   │   │   │   ├── simulator/      # Crime scenario simulator
-│   │   │   │   ├── team/           # Team management
-│   │   │   │   └── settings/       # User settings
-│   │   │   ├── api/                # Next.js API proxy routes to backend
-│   │   │   ├── sign-in/            # Clerk sign-in page
-│   │   │   └── sign-up/            # Clerk sign-up page
-│   │   ├── components/             # Reusable UI components
-│   │   ├── hooks/                  # Custom React hooks
-│   │   ├── lib/                    # API client, utilities
-│   │   └── types/                  # TypeScript type definitions
-│   ├── public/                     # Static assets
-│   └── package.json
+│   │   │   ├── (dashboard)/            # Application main layout and routes
+│   │   │   │   ├── overview/           # Crime intelligence overview & KPIs
+│   │   │   │   ├── ai-assistant/       # Interactive AI chat interface
+│   │   │   │   ├── network/            # Interactive criminal network explorer
+│   │   │   │   ├── heatmap/            # Spatial hotspot map
+│   │   │   │   ├── trends/             # Crime trend analytics dashboard
+│   │   │   │   ├── financial/          # Money trail and account graph
+│   │   │   │   ├── ai-prediction/      # ML forecasting dashboard
+│   │   │   │   ├── case-intel/         # Case intelligence and timeline search
+│   │   │   │   ├── profiling/          # Criminal entity profiling
+│   │   │   │   ├── district/           # District-wise breakdown
+│   │   │   │   └── governance/         # System governance & audit logs
+│   │   │   ├── api/                    # Next.js server proxy API routes
+│   │   │   ├── sign-in/                # Clerk authentication sign-in
+│   │   │   └── sign-up/                # Clerk authentication sign-up
+│   │   ├── components/                 # Reusable UI components & shadcn controls
+│   │   ├── hooks/                      # React custom hooks
+│   │   ├── lib/                        # API client, axios configuration, utilities
+│   │   └── types/                      # TypeScript interface definitions
+│   ├── public/                         # Static assets and media
+│   ├── package.json                    # Node dependencies and scripts
+│   └── tailwind.config.ts              # Tailwind CSS styling configuration
 │
-├── db/                             # PostgreSQL base schema SQL files
-├── docker/                         # Docker configuration
-├── docker-compose.yml              # Local multi-service dev setup
-└── datasets/                       # KSP crime CSV dataset files
+├── docker/                             # Containerization files
+├── docker-compose.yml                  # Multi-service local setup (PostgreSQL, Neo4j, App)
+└── db/                                 # Initial database SQL schemas
 ```
 
 ---
 
 ## 🔌 API Reference
 
-All routes are prefixed with `/api/v1`. Interactive Swagger UI is available at `/docs`.
+All backend REST API endpoints are served under `/api/v1`. OpenAPI Interactive documentation is available at `/docs`.
 
-### Authentication (`/auth`)
+### Authentication (`/api/v1/auth`)
 
-| Method | Endpoint | Auth | Description |
+| Method | Endpoint | Authorization | Description |
 |---|---|---|---|
-| `POST` | `/auth/register` | Public | Register a new user |
-| `POST` | `/auth/login` | Public | Login → access + refresh token |
-| `POST` | `/auth/refresh` | Refresh Token | Rotate token pair |
-| `POST` | `/auth/logout` | Bearer | Revoke current session |
-| `POST` | `/auth/logout-all` | Bearer | Revoke all sessions |
-| `GET` | `/auth/me` | Bearer | Get current user profile |
-| `POST` | `/auth/change-password` | Bearer | Change password |
+| `POST` | `/auth/register` | Public | Register a new user account |
+| `POST` | `/auth/login` | Public | Authenticate user and issue Access/Refresh token pair |
+| `POST` | `/auth/refresh` | Refresh Token | Rotate refresh token and issue new access token |
+| `POST` | `/auth/logout` | Bearer Token | Invalidate current user session |
+| `POST` | `/auth/logout-all` | Bearer Token | Revoke all active sessions for the user |
+| `GET` | `/auth/me` | Bearer Token | Fetch authenticated user profile and roles |
+| `POST` | `/auth/change-password` | Bearer Token | Update authenticated user password |
 
-### Admin (`/admin`) — requires `rbac:manage`
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET/POST` | `/admin/roles` | List or create roles |
-| `PATCH` | `/admin/roles/{name}` | Update role permissions |
-| `GET/POST` | `/admin/permissions` | List or create permissions |
-| `PUT` | `/admin/users/{id}/roles` | Assign roles to a user |
-| `GET` | `/admin/users` | List all users |
-| `GET` | `/admin/audit-logs` | Query audit trail |
-
-### Chat AI (`/chat`) — requires authentication
+### Administration (`/api/v1/admin`) — Requires `rbac:manage`
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/chat` | Ask a question in EN or KN, returns a grounded answer with sources |
-| `GET` | `/chat/{conversation_id}/pdf` | Download conversation transcript as PDF |
+| `GET` | `/admin/roles` | List system roles and associated permissions |
+| `POST` | `/admin/roles` | Create a new role definition |
+| `PATCH` | `/admin/roles/{name}` | Update permissions bound to a specific role |
+| `GET` | `/admin/permissions` | List all system permissions |
+| `PUT` | `/admin/users/{user_id}/roles` | Assign role definitions to a user |
+| `GET` | `/admin/users` | Retrieve full list of platform users |
+| `GET` | `/admin/audit-logs` | Query security audit log trail with pagination |
 
-### Graph Intelligence (`/graph`) — requires `graph:read`
+### Conversational AI (`/api/v1/chat`)
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/graph/network` | Full network traversal around a root entity |
-| `GET` | `/graph/person/{person_id}` | Person profile: FIRs, associates, phones, accounts + ego graph |
-| `GET` | `/graph/fir/{fir_id}` | FIR profile: accused, victims, witnesses, crimes, locations |
-| `GET` | `/graph/associates/{person_id}` | Direct + common 2nd-degree associates |
-| `GET` | `/graph/repeat-offenders` | Persons accused in ≥ N FIRs |
-| `GET` | `/graph/organized-groups` | Co-offending criminal communities (union-find) |
-| `GET` | `/graph/search` | Search graph nodes by id/name |
-| `GET` | `/graph/path` | Shortest path between two entities |
+| Method | Endpoint | Authorization | Description |
+|---|---|---|---|
+| `POST` | `/chat` | Bearer Token | Process query in EN/KN, return AI response with cited sources |
+| `GET` | `/chat/{conversation_id}/pdf` | Bearer Token | Export conversation history to formatted PDF report |
 
-### Financial Crime (`/financial`) — requires `financial:read`
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/financial/accounts/{account_no}` | Account profile with linked entities |
-| `GET` | `/financial/person/{person_id}` | Person ↔ account ↔ transaction traversal |
-| `GET` | `/financial/transactions` | Transaction lookup with amount/method filters |
-| `GET` | `/financial/money-trail` | Multi-hop downstream fund tracing |
-| `GET` | `/financial/network` | Financial network around an account or person |
-| `GET` | `/financial/suspicious` | High-value + circular flows + pass-through detection |
-| `GET` | `/financial/search` | Search accounts or persons |
-| `GET` | `/financial/path` | Shortest directional money path between two accounts |
-
-### Health Probes
+### Criminal Network Graph (`/api/v1/graph`) — Requires `graph:read`
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/health` | API liveness probe |
-| `GET` | `/health/graph` | Neo4j connectivity probe |
+| `GET` | `/graph/network` | Retrieve multi-hop network nodes around an entity |
+| `GET` | `/graph/person/{person_id}` | Detailed profile: linked FIRs, associates, phone numbers |
+| `GET` | `/graph/fir/{fir_id}` | FIR breakdown: accused, victims, witnesses, crimes, location |
+| `GET` | `/graph/associates/{person_id}` | Direct and 2nd-degree associates |
+| `GET` | `/graph/repeat-offenders` | Find offenders associated with $\ge N$ FIRs |
+| `GET` | `/graph/organized-groups` | Identify co-offending criminal communities using Union-Find |
+| `GET` | `/graph/search` | Search graph nodes by ID, name, or attribute |
+| `GET` | `/graph/path` | Calculate shortest relationship path between two entities |
+
+### Financial Crime (`/api/v1/financial`) — Requires `financial:read`
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/financial/accounts/{account_no}` | Account profile and linked entity graph |
+| `GET` | `/financial/person/{person_id}` | Traverse Person ↔ Bank Account ↔ Transaction chains |
+| `GET` | `/financial/transactions` | Search transactions by amount, date, and payment method |
+| `GET` | `/financial/money-trail` | Multi-hop downstream fund flow tracing |
+| `GET` | `/financial/suspicious` | Detect circular fund transfers, pass-through accounts, and anomalies |
+| `GET` | `/financial/path` | Calculate shortest directional transaction path between accounts |
+
+---
+
+## 🤖 AI Tool-Calling System
+
+The AI Assistant utilizes a tool-calling architecture where the LLM does not guess answers; instead, it dynamically selects and invokes appropriate python functions backed by **DuckDB** and **Neo4j**:
+
+```
+                              ┌───────────────────────────────────┐
+                              │     Conversational AI Agent       │
+                              └─────────────────┬─────────────────┘
+                                                │
+                 ┌──────────────────────────────┴──────────────────────────────┐
+                 │                                                             │
+                 ▼                                                             ▼
+  ┌─────────────────────────────┐                               ┌─────────────────────────────┐
+  │   DuckDB Statistical Tools  │                               │    Neo4j Graph Case Tools   │
+  ├─────────────────────────────┤                               ├─────────────────────────────┤
+  │ 1. query_crime_stats        │                               │ 6. case_summary             │
+  │ 2. district_review_summary  │                               │ 7. investigation_timeline   │
+  │ 3. rising_crimes            │                               │ 8. similar_cases            │
+  │ 4. crime_trend              │                               │ 9. suggest_leads            │
+  │ 5. disposal_analysis        │                               │                             │
+  └─────────────────────────────┘                               └─────────────────────────────┘
+```
+
+1. **`query_crime_stats`**: Runs structured SQL queries on DuckDB for crime rates, case counts, and unit breakdowns.
+2. **`district_review_summary`**: Provides executive summaries for crime performance across Karnataka districts.
+3. **`rising_crimes`**: Identifies crime categories with statistically significant upward trends over specified periods.
+4. **`crime_trend`**: Generates monthly/quarterly time-series stats for trend analysis.
+5. **`disposal_analysis`**: Evaluates case disposal ratios, chargesheet rates, and conviction statistics.
+6. **`case_summary`**: Retrieves complete case facts, involved suspects, and charges from Neo4j.
+7. **`investigation_timeline`**: Builds chronological event sequences for specific FIRs.
+8. **`similar_cases`**: Uses graph pattern matching to identify similar modus operandi (M.O.).
+9. **`suggest_leads`**: Traverses suspect connections to uncover unlinked co-accused or shared assets.
 
 ---
 
 ## 🔑 Environment Variables
 
-### Backend (`backend/.env`)
+### Backend Configuration (`backend/.env`)
 
 ```env
-# ── Database ──────────────────────────────────────────────────
-POSTGRES_URI=postgresql://user:password@host/dbname?sslmode=require
+# ── Database Credentials ──────────────────────────────────────
+POSTGRES_URI=postgresql://user:password@ep-sample.neon.tech/crimerakshak?sslmode=require
 
-# ── AI / LLM ──────────────────────────────────────────────────
-LLM_PROVIDER=openrouter                   # or "gemini"
-OPENROUTER_API_KEY=sk-or-v1-...
+# ── AI & LLM Engine Settings ──────────────────────────────────
+LLM_PROVIDER=openrouter                   # Options: "openrouter" or "gemini"
+OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-GEMINI_API_KEY=...
+GEMINI_API_KEY=AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
 LLM_AGENT_MODEL=google/gemini-2.5-flash
 LLM_SUMMARY_MODEL=google/gemini-2.5-flash
 LLM_MAX_TOKENS=1024
 
-# ── Neo4j ─────────────────────────────────────────────────────
+# ── Neo4j Graph Database ──────────────────────────────────────
 USE_NEO4J=True
-NEO4J_URI=neo4j+ssc://your-instance.databases.neo4j.io
-NEO4J_USER=your_user
-NEO4J_PASSWORD=your_password
-NEO4J_DATABASE=your_database
+NEO4J_URI=neo4j+ssc://xxxxxx.databases.neo4j.io
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=your_neo4j_password
+NEO4J_DATABASE=neo4j
 
-# ── Graph Tuning ───────────────────────────────────────────────
+# ── Graph Query Constraints ───────────────────────────────────
 GRAPH_MAX_NODES=500
 GRAPH_DEFAULT_LIMIT=100
 GRAPH_MAX_DEPTH=5
 
-# ── Auth / JWT ─────────────────────────────────────────────────
-SECRET_KEY=your_strong_secret_key_here
+# ── JWT Authentication & Security ─────────────────────────────
+SECRET_KEY=e839d0f31c38e92040b2f15a9a834e7f8271038290123
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 REFRESH_TOKEN_EXPIRE_DAYS=7
-CLERK_SECRET_KEY=sk_test_...
 
-# ── Security ───────────────────────────────────────────────────
+# ── Security Policies ─────────────────────────────────────────
 PASSWORD_MIN_LENGTH=8
 MAX_FAILED_LOGIN_ATTEMPTS=5
 ACCOUNT_LOCKOUT_MINUTES=15
 
-# ── CORS ───────────────────────────────────────────────────────
-BACKEND_CORS_ORIGINS=http://localhost:3000,https://your-frontend-domain.com
+# ── CORS Configuration ────────────────────────────────────────
+BACKEND_CORS_ORIGINS=http://localhost:3000,https://crimerakshak.vercel.app
 
-# ── Data Paths ─────────────────────────────────────────────────
+# ── Storage & Analytics ───────────────────────────────────────
 DATASETS_DIR=datasets
 DUCKDB_PATH=crime_stats.duckdb
 ```
 
-### Frontend (`frontend/.env.local`)
+### Frontend Configuration (`frontend/.env.local`)
 
 ```env
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_SECRET_KEY=sk_test_...
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxxxxxxxxx
+CLERK_SECRET_KEY=sk_test_xxxxxxxxxxxxxxxxxxxx
 NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
 NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/
 NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/
-NEXT_PUBLIC_API_URL=https://your-backend-api.com/api/v1
-BACKEND_URL=https://your-backend-api.com
+NEXT_PUBLIC_API_URL=http://localhost:9000/api/v1
+BACKEND_URL=http://localhost:9000
 ```
 
 ---
@@ -369,95 +454,100 @@ BACKEND_URL=https://your-backend-api.com
 ## 💻 Local Development Setup
 
 ### Prerequisites
-- **Python** 3.9+
-- **Node.js** 18+ and npm
-- **PostgreSQL** (or a [Neon](https://neon.tech) cloud instance)
-- **Neo4j** 5.x (or [AuraDB Free](https://neo4j.com/cloud/platform/aura-graph-database/))
-- **OpenRouter API Key** — get one at [openrouter.ai](https://openrouter.ai)
 
-### 1. Clone the Repository
+- **Python**: 3.9 or higher
+- **Node.js**: 18.x or higher with `npm`
+- **PostgreSQL**: Local instance or free cloud database on [Neon](https://neon.tech)
+- **Neo4j**: 5.x instance or [Neo4j AuraDB Free](https://neo4j.com/cloud/platform/aura-graph-database/)
+- **API Key**: [OpenRouter API Key](https://openrouter.ai) or Google Gemini API Key
+
+---
+
+### Step-by-Step Installation
+
+#### 1. Clone Project Repository
+
 ```bash
 git clone https://github.com/lokojitcoder123/CrimeRakshak-NEW.git
 cd CrimeRakshak-NEW
 ```
 
-### 2. Backend Setup
+#### 2. Setup Backend (FastAPI)
+
 ```bash
 cd backend
 
-# Create and activate virtual environment
+# Create virtual environment
 python -m venv venv
 
-# Windows:
-venv\Scripts\activate
-# Linux/Mac:
+# Activate virtual environment
+# On Windows (PowerShell):
+.\venv\Scripts\Activate.ps1
+# On Linux / macOS:
 source venv/bin/activate
 
-# Install dependencies
+# Install required Python dependencies
 pip install -r requirements.txt
 
-# Configure environment
+# Create environment configuration file
 cp .env.example .env
-# Edit .env with your actual API keys and database credentials
+# Open .env and add your valid database connection strings and API keys
 
-# Apply database migrations
+# Run database schema migrations
 alembic upgrade head
 
-# Seed roles, permissions, and initial admin user
+# Seed initial roles, permissions, and superuser account
 python -m app.seed
 
-# Start the backend server
+# Start backend server
 python run.py
-# API available at: http://localhost:9000
-# Swagger docs at:  http://localhost:9000/docs
 ```
 
-### 3. Frontend Setup
-```bash
-cd frontend
+The API will now be live at: `http://localhost:9000`  
+Swagger API Docs accessible at: `http://localhost:9000/docs`
 
-# Install dependencies
+#### 3. Setup Frontend (Next.js)
+
+```bash
+cd ../frontend
+
+# Install Node dependencies
 npm install
 
-# Configure environment (copy and edit)
-# Create frontend/.env.local with your Clerk keys and backend URL
+# Create environment configuration file (.env.local)
+# Add your NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and NEXT_PUBLIC_API_URL
 
-# Start development server
+# Start Next.js development server
 npm run dev
-# App available at: http://localhost:3000
 ```
 
-### 4. Docker Compose (Optional)
-```bash
-# Start all services (backend + postgres + neo4j)
-docker-compose up -d
-```
+The web UI will be accessible at: `http://localhost:3000`
 
 ---
 
-## 🗄️ Database Setup
+## 🗄️ Database Setup & Ingestion
 
-### PostgreSQL (Neon)
+### PostgreSQL Database (Neon)
+Applies RBAC tables, user profiles, and audit log schemas:
+
 ```bash
-# Apply the base crime schema
-psql $POSTGRES_URI < db/schema.sql
-
-# Apply RBAC migration tables
+cd backend
 alembic upgrade head
-
-# Seed roles, permissions, and admin user
 python -m app.seed
 ```
 
-### DuckDB (Crime Statistics)
-DuckDB is built automatically on first startup from CSV files in `datasets/`.  
-To rebuild manually:
+### DuckDB In-Memory OLAP Database
+DuckDB builds an optimized embedded database file (`crime_stats.duckdb`) directly from CSV files in `datasets/`.  
+To force a manual rebuild:
+
 ```bash
 cd backend
 python -m app.chat.data.loader
 ```
 
-### Neo4j (Criminal Network Graph)
+### Neo4j Graph Database
+Ingests crime records, suspect entities, victim networks, FIR nodes, and financial transactions into Neo4j:
+
 ```bash
 cd backend
 python ingest.py
@@ -467,71 +557,39 @@ python ingest.py
 
 ## 🚀 Deployment
 
-### Backend (Render / Railway / Fly.io / Any Python host)
+### Backend Deployment (Render / Railway / Fly.io / AWS EC2)
 
-| Setting | Value |
+| Parameter | Configuration |
 |---|---|
-| **Runtime** | Python 3.9+ |
+| **Runtime Environment** | Python 3.9+ |
 | **Build Command** | `pip install -r requirements.txt` |
-| **Startup Command** | `python run.py` |
-| **Port** | Reads from `PORT` env var (defaults to `9000`) |
-| **Health Check URL** | `/health` |
+| **Start Command** | `python run.py` |
+| **Port Variable** | `PORT` (Defaults to `9000`) |
+| **Health Check Endpoint** | `/health` |
 
-### Frontend (Vercel / Netlify / Any Node host)
+### Frontend Deployment (Vercel / Netlify)
 
-| Setting | Value |
+| Parameter | Configuration |
 |---|---|
 | **Build Command** | `npm run build` |
 | **Output Directory** | `.next` |
 | **Start Command** | `npm start` |
 | **Root Directory** | `frontend/` |
 
-> After deploying the backend, update `NEXT_PUBLIC_API_URL` and `BACKEND_URL` in the frontend environment variables to point to your deployed backend URL.
+> **Note**: Update `NEXT_PUBLIC_API_URL` and `BACKEND_URL` in the frontend environment variables after deploying the backend to point to your live backend service URL.
 
 ---
 
-## 🔐 Security Design
+## 🔐 Security Design & Compliance
 
-- **Refresh Token Rotation**: Every refresh is single-use and persisted by `jti`. Reuse of a rotated token revokes the entire session family for breach containment.
-- **SELECT-only LLM SQL**: The AI agent can only read from DuckDB — it cannot write to or modify any database.
-- **Parameterized Cypher**: All Neo4j queries use bound parameters only. Node labels and depths are validated against a whitelist before use — no string injection possible.
-- **Audit Logging**: Every privileged API action is recorded in the PostgreSQL `audit_logs` table.
-- **Account Lockout**: Configurable login attempt limit with temporary lockout.
-- **CORS Policy**: Configurable allowed origins via `BACKEND_CORS_ORIGINS`.
+1. **Refresh Token Rotation (Single-Use Tokens)**: Refresh tokens are single-use and tracked via unique JWT Identifiers (`jti`). Detecting token reuse triggers immediate invalidation of all related tokens in that user session family to contain potential breach attempts.
+2. **Read-Only LLM SQL Execution**: The AI conversational engine executes strictly `SELECT` SQL queries over DuckDB. Modifying data (`INSERT`, `UPDATE`, `DELETE`, `DROP`) is impossible via LLM tool calls.
+3. **Parameterized Cypher Injection Protection**: All Neo4j graph queries use parameterized Cypher variables. Dynamic labels and search parameters are validated against pre-approved whitelists.
+4. **Comprehensive Security Audit Logging**: Privileged operations (role modifications, permission updates, high-level intelligence searches) generate immutable entries in the PostgreSQL `audit_logs` table.
+5. **Account Lockout Protection**: Automatic temporary account lockout is triggered after $N$ failed password authentication attempts.
 
 ---
 
 ## 📝 License
 
-This project is developed for the **Karnataka State Police** crime intelligence initiative.
-
-## Architecture Pipeline
-
-The system follows a modular pipeline:
-
-1. **Data Ingestion** – Real‑time crime reports are collected via the frontend and stored in PostgreSQL.
-2. **Graph Construction** – A scheduled job transforms relational data into a Neo4j graph, linking incidents, locations, officers, and suspects.
-3. **Analytics Layer** – DuckDB processes large‑scale batch analytics (trend detection, hotspot heatmaps).
-4. **AI Engine** – FastAPI routes invoke the LLM (LLM‑only mode) to generate insights, recommendations, and natural‑language summaries based on graph queries and analytics results.
-5. **Presentation** – Next.js renders dashboards, maps, and chat interfaces, pulling data through the backend API.
-
-```mermaid
-flowchart LR
-    subgraph Ingestion[Data Ingestion]
-        FE[Frontend (Next.js)] -->|REST API| BE[FastAPI]
-        BE -->|Writes| PG[(PostgreSQL)]
-    end
-    subgraph Graph[Graph Construction]
-        PG -->|ETL| Neo4j[(Neo4j Graph)]
-    end
-    subgraph Analytics[Analytics]
-        PG -->|Batch Export| DuckDB[(DuckDB)]
-    end
-    subgraph AI[AI Engine]
-        Neo4j -->|Cypher Queries| LLM[LLM (select‑only)]
-        DuckDB -->|SQL Queries| LLM
-    end
-    subgraph UI[Presentation]
-        LLM -->|JSON Responses| FE
-    end
-```
+This software and underlying crime intelligence algorithms are developed for the **Karnataka State Police (KSP)** crime analytics initiative. All rights reserved.
