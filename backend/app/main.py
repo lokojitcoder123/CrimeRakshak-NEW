@@ -37,6 +37,10 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.BACKEND_CORS_ORIGINS,
+    # Allow any Render / Vercel deployment subdomain regardless of the
+    # BACKEND_CORS_ORIGINS env var, so the deployed frontend can call the API
+    # directly from the browser (e.g. the /network page's direct fetch).
+    allow_origin_regex=r"https://.*\.(onrender\.com|vercel\.app)$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -111,12 +115,15 @@ def _startup_init() -> None:
             import os
             from app.core.config import settings
             duckdb_path = settings.DUCKDB_PATH
+            datasets_dir = settings.resolved_datasets_dir
             if not os.path.exists(duckdb_path):
                 logger.info("DuckDB file missing, building from datasets + generating synthetic cases...")
                 from app.chat.data.case_generator import generate
-                generate()
+                from pathlib import Path
+                synth_dir = os.path.join(datasets_dir, "synthetic_cases")
+                generate(out_dir=Path(synth_dir))
                 from app.chat.data.loader import build_database
-                build_database()
+                build_database(datasets_dir=datasets_dir, duckdb_path=duckdb_path)
                 logger.info("DuckDB database built successfully.")
             else:
                 logger.info("DuckDB file found at %s, skipping build.", duckdb_path)

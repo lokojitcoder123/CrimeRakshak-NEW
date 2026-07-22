@@ -53,7 +53,29 @@ CRIME_PROFILES: dict[str, tuple[str, list[str], bool, list[int]]] = {
 STATUSES = ["under-investigation", "charge-sheeted", "court-pending", "convicted", "closed"]
 STATUS_WEIGHTS = [0.30, 0.20, 0.18, 0.20, 0.12]
 
-OUT_DIR = Path(__file__).resolve().parents[3] / ".." / "datasets" / "synthetic_cases"
+def _default_out_dir() -> Path:
+    """Resolve the output directory for synthetic CSVs.
+
+    Priority:
+    1. DATASETS_DIR env var (set by start.sh / Render env)
+    2. The datasets/ folder at the repo root (sibling of backend/)
+    3. A datasets/ folder inside the current working directory
+    """
+    import os
+    datasets_env = os.environ.get("DATASETS_DIR")
+    if datasets_env:
+        return Path(datasets_env) / "synthetic_cases"
+    # Heuristic: walk up from this file to find a 'datasets' sibling of 'backend/'
+    # __file__ = backend/app/chat/data/case_generator.py  → parents[3] = backend/
+    backend_dir = Path(__file__).resolve().parents[3]
+    candidate = backend_dir.parent / "datasets" / "synthetic_cases"
+    if candidate.parent.exists():
+        return candidate
+    # Last resort: relative to cwd
+    return Path("datasets") / "synthetic_cases"
+
+
+OUT_DIR = _default_out_dir()
 
 
 def generate(out_dir: Path | None = None) -> dict[str, int]:

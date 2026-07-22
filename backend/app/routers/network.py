@@ -265,10 +265,14 @@ def network_full(node_limit: int = Query(300, ge=50, le=800),
         if "does not exist" in err_str or "no such table" in err_str or "file does not exist" in err_str:
             logger.warning("DuckDB tables missing, attempting auto-build: %s", e)
             try:
+                from pathlib import Path
+                from app.core.config import settings as _settings
                 from app.chat.data.loader import build_database
-                build_database()
                 from app.chat.data.case_generator import generate
-                generate()
+                datasets_dir = _settings.resolved_datasets_dir
+                synth_dir = str(Path(datasets_dir) / "synthetic_cases")
+                generate(out_dir=Path(synth_dir))
+                build_database(datasets_dir=datasets_dir)
                 # retry once after build
                 accused = run_query(
                     "SELECT p.person_id, ANY_VALUE(p.name) AS name, ANY_VALUE(p.age) AS age, "

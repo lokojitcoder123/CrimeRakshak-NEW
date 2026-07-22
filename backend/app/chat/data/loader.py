@@ -224,7 +224,7 @@ def build_database(datasets_dir: str | None = None, duckdb_path: str | None = No
     Returns a mapping ``{table: {clean_col: original_label}}`` used by the
     schema-card generator.
     """
-    base = Path(datasets_dir or settings.DATASETS_DIR)
+    base = Path(datasets_dir or settings.resolved_datasets_dir)
     db_path = duckdb_path or settings.DUCKDB_PATH
     labels: dict[str, dict[str, str]] = {}
 

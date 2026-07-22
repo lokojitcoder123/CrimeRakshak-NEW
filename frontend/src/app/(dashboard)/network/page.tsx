@@ -59,98 +59,139 @@ export default function NetworkPage() {
 
   useEffect(() => {
     const loadGraph = async () => {
-      try {
-        setLoading(true);
-        const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://crimerakshak-new.onrender.com/api/v1";
-        const res = await fetch(`${API_BASE}/network/full?node_limit=150&edge_limit=400`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://crimerakshak-new.onrender.com/api/v1";
+      const url = `${API_BASE}/network/full?node_limit=150&edge_limit=400`;
 
-        const mappedNodes: NetworkNode[] = (data.nodes || []).map((n: any) => {
-          let type: "accused" | "victim" | "location" | "account" = "location";
-          if (n.label === "Person") {
-            type = n.properties?.role === "victim" ? "victim" : "accused";
-          } else if (n.label === "Account" || n.label === "BankAccount") {
-            type = "account";
-          } else if (n.label === "Location" || n.label === "FIR") {
-            type = "location";
+      // Retry up to 3 times with exponential backoff — handles Render free-tier
+      // cold-starts (backend sleeps after 15 min of inactivity and takes ~30-60 s
+      // to wake up, which manifests as a "Failed to fetch" / network error).
+      const MAX_ATTEMPTS = 3;
+      let lastErr: any = null;
+
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        try {
+          setLoading(true);
+          if (attempt > 1) {
+            // Brief pause before retry so the backend has more time to wake up.
+            await new Promise((r) => setTimeout(r, attempt * 3000));
           }
 
-          let risk: "high" | "medium" | "low" = "low";
-          const riskScore = n.properties?.risk_score || 0;
-          if (riskScore > 70) risk = "high";
-          else if (riskScore > 40) risk = "medium";
-
-          return {
-            id: n.id,
-            name: n.properties?.name || n.id,
-            type,
-            group: 0, // assigned below from real graph connectivity
-            risk,
-            firCount: n.properties?.fir_count || 1
-          };
-        });
-
-        const mappedEdges: NetworkEdge[] = (data.edges || []).map((e: any) => {
-          let type: "co-accused" | "shared-location" | "transaction" | "victim-link" = "co-accused";
-          if (e.type === "CO_ACCUSED") {
-            type = "co-accused";
-          } else if (e.type === "IN_DISTRICT" || e.type === "SHARED_LOCATION" || e.type === "INVOLVED_IN") {
-            type = "shared-location";
-          } else if (e.type === "HOLDS" || e.type === "TRANSFERRED_TO") {
-            type = "transaction";
-          } else {
-            type = "victim-link";
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 90_000); // 90 s timeout
+          let res: Response;
+          try {
+            res = await fetch(url, { signal: controller.signal });
+          } finally {
+            clearTimeout(timeout);
           }
 
-          return {
-            source: e.source,
-            target: e.target,
-            type
-          };
-        });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
 
-        // Assign groups from real graph connectivity (connected components),
-        // so "Detected Clusters" reflects actual linked subnetworks.
-        const parent: Record<string, string> = {};
-        const find = (x: string): string => {
-          parent[x] ??= x;
-          while (parent[x] !== x) {
-            parent[x] = parent[parent[x]];
-            x = parent[x];
+          // If the backend returned a "still initializing" payload, retry.
+          if (data.error && data.total_nodes === 0 && attempt < MAX_ATTEMPTS) {
+            lastErr = new Error(data.error);
+            continue;
           }
-          return x;
-        };
-        mappedNodes.forEach((n) => find(n.id));
-        mappedEdges.forEach((e) => {
-          const ra = find(e.source);
-          const rb = find(e.target);
-          if (ra !== rb) parent[ra] = rb;
-        });
-        const rootToGroup: Record<string, number> = {};
-        const componentSizes: Record<string, number> = {};
-        mappedNodes.forEach((n) => {
-          const root = find(n.id);
-          componentSizes[root] = (componentSizes[root] || 0) + 1;
-        });
-        // Number groups largest-first: G1 = biggest cluster.
-        Object.keys(componentSizes)
-          .sort((a, b) => componentSizes[b] - componentSizes[a])
-          .forEach((root, i) => {
-            rootToGroup[root] = i + 1;
+
+          const mappedNodes: NetworkNode[] = (data.nodes || []).map((n: any) => {
+            let type: "accused" | "victim" | "location" | "account" = "location";
+            if (n.label === "Person") {
+              type = n.properties?.role === "victim" ? "victim" : "accused";
+            } else if (n.label === "Account" || n.label === "BankAccount") {
+              type = "account";
+            } else if (n.label === "Location" || n.label === "FIR") {
+              type = "location";
+            }
+
+            let risk: "high" | "medium" | "low" = "low";
+            const riskScore = n.properties?.risk_score || 0;
+            if (riskScore > 70) risk = "high";
+            else if (riskScore > 40) risk = "medium";
+
+            return {
+              id: n.id,
+              name: n.properties?.name || n.id,
+              type,
+              group: 0, // assigned below from real graph connectivity
+              risk,
+              firCount: n.properties?.fir_count || 1
+            };
           });
-        mappedNodes.forEach((n) => {
-          n.group = rootToGroup[find(n.id)];
-        });
 
-        setNetworkNodes(mappedNodes);
-        setNetworkEdges(mappedEdges);
-      } catch (err: any) {
-        console.error("Failed to load network graph:", err);
-        setError(err.message || "Failed to query Neo4j graph data.");
-      } finally {
-        setLoading(false);
+          const mappedEdges: NetworkEdge[] = (data.edges || []).map((e: any) => {
+            let type: "co-accused" | "shared-location" | "transaction" | "victim-link" = "co-accused";
+            if (e.type === "CO_ACCUSED") {
+              type = "co-accused";
+            } else if (e.type === "IN_DISTRICT" || e.type === "SHARED_LOCATION" || e.type === "INVOLVED_IN") {
+              type = "shared-location";
+            } else if (e.type === "HOLDS" || e.type === "TRANSFERRED_TO") {
+              type = "transaction";
+            } else {
+              type = "victim-link";
+            }
+
+            return {
+              source: e.source,
+              target: e.target,
+              type
+            };
+          });
+
+          // Assign groups from real graph connectivity (connected components),
+          // so "Detected Clusters" reflects actual linked subnetworks.
+          const parent: Record<string, string> = {};
+          const find = (x: string): string => {
+            parent[x] ??= x;
+            while (parent[x] !== x) {
+              parent[x] = parent[parent[x]];
+              x = parent[x];
+            }
+            return x;
+          };
+          mappedNodes.forEach((n) => find(n.id));
+          mappedEdges.forEach((e) => {
+            const ra = find(e.source);
+            const rb = find(e.target);
+            if (ra !== rb) parent[ra] = rb;
+          });
+          const rootToGroup: Record<string, number> = {};
+          const componentSizes: Record<string, number> = {};
+          mappedNodes.forEach((n) => {
+            const root = find(n.id);
+            componentSizes[root] = (componentSizes[root] || 0) + 1;
+          });
+          // Number groups largest-first: G1 = biggest cluster.
+          Object.keys(componentSizes)
+            .sort((a, b) => componentSizes[b] - componentSizes[a])
+            .forEach((root, i) => {
+              rootToGroup[root] = i + 1;
+            });
+          mappedNodes.forEach((n) => {
+            n.group = rootToGroup[find(n.id)];
+          });
+
+          setNetworkNodes(mappedNodes);
+          setNetworkEdges(mappedEdges);
+          return; // success — exit retry loop
+        } catch (err: any) {
+          lastErr = err;
+          const isAbort = err?.name === "AbortError";
+          console.warn(`Network graph fetch attempt ${attempt}/${MAX_ATTEMPTS} failed:`, err);
+          if (isAbort && attempt < MAX_ATTEMPTS) continue; // retry on timeout
+          if (attempt === MAX_ATTEMPTS) break;
+        } finally {
+          setLoading(false);
+        }
       }
+
+      // All attempts exhausted.
+      console.error("Failed to load network graph after retries:", lastErr);
+      const msg = lastErr?.name === "AbortError"
+        ? "Request timed out. The server may be waking up — please refresh the page in a moment."
+        : (lastErr?.message || "Failed to load network data. Please try again.");
+      setError(msg);
+      setLoading(false);
     };
     loadGraph();
   }, []);
@@ -204,7 +245,7 @@ export default function NetworkPage() {
       <div className="p-4 md:p-6 lg:p-8 h-full flex flex-col items-center justify-center min-h-[600px]">
         <Loader2 className="h-10 w-10 text-brand-red animate-spin mb-4" />
         <h2 className="text-xl font-heading font-bold text-foreground">{t("Analyzing Criminal Networks...")}</h2>
-        <p className="text-muted-foreground text-sm mt-2">{t("Fetching co-offending ties and location hubs from Neo4j")}</p>
+        <p className="text-muted-foreground text-sm mt-2">{t("Fetching co-offending ties and location hubs from the criminal database...")}</p>
       </div>
     );
   }

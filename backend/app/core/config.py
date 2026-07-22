@@ -81,6 +81,46 @@ class Settings(BaseSettings):
     DATASETS_DIR: str = "datasets"
     DUCKDB_PATH: str = "crime_stats.duckdb"
 
+    @property
+    def resolved_datasets_dir(self) -> str:
+        """Return an absolute path to the datasets directory.
+
+        Handles the common case where DATASETS_DIR is set to a relative path
+        such as ``../datasets`` (local dev) which may not resolve correctly
+        from the working directory on Render.  We walk up from this file's
+        location to find the real datasets/ folder if the env-var path does
+        not exist as-is.
+        """
+        import os
+        from pathlib import Path
+
+        raw = self.DATASETS_DIR
+        # If it is already absolute and exists, use it directly.
+        p = Path(raw)
+        if p.is_absolute() and p.is_dir():
+            return str(p)
+
+        # Try resolving relative to cwd first.
+        cwd_rel = Path(os.getcwd()) / raw
+        if cwd_rel.is_dir():
+            return str(cwd_rel.resolve())
+
+        # Try resolving relative to the backend/ directory (this file lives in
+        # backend/app/core/config.py → parents[2] = backend/).
+        backend_dir = Path(__file__).resolve().parents[2]
+        backend_rel = (backend_dir / raw).resolve()
+        if backend_rel.is_dir():
+            return str(backend_rel)
+
+        # Final fallback: look for a 'datasets' folder next to backend/.
+        sibling = (backend_dir.parent / "datasets").resolve()
+        if sibling.is_dir():
+            return str(sibling)
+
+        # Return raw and let callers handle the missing-directory error.
+        return raw
+
+
     # ── Security policy ──
     PASSWORD_MIN_LENGTH: int = 8
     # Wrong-password attempts before an account is temporarily locked.
