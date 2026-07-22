@@ -504,3 +504,34 @@ python ingest.py
 ## 📝 License
 
 This project is developed for the **Karnataka State Police** crime intelligence initiative.
+
+## Architecture Pipeline
+
+The system follows a modular pipeline:
+
+1. **Data Ingestion** – Real‑time crime reports are collected via the frontend and stored in PostgreSQL.
+2. **Graph Construction** – A scheduled job transforms relational data into a Neo4j graph, linking incidents, locations, officers, and suspects.
+3. **Analytics Layer** – DuckDB processes large‑scale batch analytics (trend detection, hotspot heatmaps).
+4. **AI Engine** – FastAPI routes invoke the LLM (LLM‑only mode) to generate insights, recommendations, and natural‑language summaries based on graph queries and analytics results.
+5. **Presentation** – Next.js renders dashboards, maps, and chat interfaces, pulling data through the backend API.
+
+```mermaid
+flowchart LR
+    subgraph Ingestion[Data Ingestion]
+        FE[Frontend (Next.js)] -->|REST API| BE[FastAPI]
+        BE -->|Writes| PG[(PostgreSQL)]
+    end
+    subgraph Graph[Graph Construction]
+        PG -->|ETL| Neo4j[(Neo4j Graph)]
+    end
+    subgraph Analytics[Analytics]
+        PG -->|Batch Export| DuckDB[(DuckDB)]
+    end
+    subgraph AI[AI Engine]
+        Neo4j -->|Cypher Queries| LLM[LLM (select‑only)]
+        DuckDB -->|SQL Queries| LLM
+    end
+    subgraph UI[Presentation]
+        LLM -->|JSON Responses| FE
+    end
+```
