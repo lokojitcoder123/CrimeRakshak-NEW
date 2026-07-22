@@ -56,42 +56,60 @@ CrimeRakshak is an enterprise-grade crime intelligence and investigation platfor
 
 ### System Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                             CLIENT PRESENTATION LAYER                       │
-│                        Next.js 16 (App Router) + React 19                   │
-│        (Crime Dashboard · AI Assistant · Network Graph · Heatmaps)          │
-└──────────────────────────────────────┬──────────────────────────────────────┘
-                                       │ HTTPS / REST (JWT Auth)
-                                       ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          FASTAPI BACKEND SERVICE LAYER                      │
-│                                Python 3.9+ · Uvicorn                        │
-│                                                                             │
-│  ┌────────────────┐   ┌─────────────────┐   ┌────────────────────────────┐  │
-│  │ Auth & RBAC    │   │ Conversational  │   │ Graph Intelligence         │  │
-│  │ JWT · Sessions │   │ AI Agent Loop   │   │ Cypher Traversal           │  │
-│  │ Audit Logs     │   │ 9-Tool Registry │   │ Union-Find Communities     │  │
-│  └───────┬────────┘   └────────┬────────┘   └─────────────┬──────────────┘  │
-│          │                     │                          │                 │
-│  ┌───────┴────────┐   ┌────────┴────────┐   ┌─────────────┴──────────────┐  │
-│  │ ML Predictor   │   │ Analytics Engine│   │ Financial Crime            │  │
-│  │ XGBoost/ARIMA  │   │ DuckDB Execution│   │ Money Trail Tracing        │  │
-│  └────────────────┘   └─────────────────┘   └────────────────────────────┘  │
-└──────────┬─────────────────────┬──────────────────────────┬─────────────────┘
-           │                     │                          │
-     ┌─────▼──────┐        ┌─────▼──────┐             ┌─────▼───────────────────┐
-     │ PostgreSQL │        │   DuckDB   │             │      Neo4j Graph        │
-     │   (Neon)   │        │(Analytics) │             │     (AuraDB 5.x)        │
-     │ Users/RBAC │        │ Crime CSV  │             │ Criminal Networks &     │
-     │ Audit Logs │        │ Statistics │             │ Financial Transactions  │
-     └────────────┘        └────────────┘             └─────────────────────────┘
-           │
-     ┌─────▼────────────────────────────────────────┐
-     │           External LLM Services              │
-     │   OpenRouter API / Google Gemini API         │
-     │   (Function calling & answer generation)     │
-     └──────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    %% Styling Definitions
+    classDef clientStyle fill:#4F46E5,stroke:#3730A3,stroke-width:2px,color:#FFFFFF,font-weight:bold
+    classDef apiStyle fill:#0EA5E9,stroke:#0284C7,stroke-width:2px,color:#FFFFFF,font-weight:bold
+    classDef authStyle fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF
+    classDef aiStyle fill:#8B5CF6,stroke:#6D28D9,stroke-width:2px,color:#FFFFFF
+    classDef graphStyle fill:#06B6D4,stroke:#0891B2,stroke-width:2px,color:#FFFFFF
+    classDef finStyle fill:#10B981,stroke:#059669,stroke-width:2px,color:#FFFFFF
+    classDef analyticsStyle fill:#EC4899,stroke:#DB2777,stroke-width:2px,color:#FFFFFF
+    classDef mlStyle fill:#6366F1,stroke:#4338CA,stroke-width:2px,color:#FFFFFF
+    classDef dbPgStyle fill:#1E40AF,stroke:#1D4ED8,stroke-width:2px,color:#FFFFFF
+    classDef dbDuckStyle fill:#CA8A04,stroke:#A16207,stroke-width:2px,color:#FFFFFF
+    classDef dbNeoStyle fill:#047857,stroke:#065F46,stroke-width:2px,color:#FFFFFF
+    classDef llmStyle fill:#E11D48,stroke:#BE123C,stroke-width:2px,color:#FFFFFF
+
+    subgraph ClientLayer["🖥️ CLIENT PRESENTATION LAYER"]
+        UI["Next.js 16 (App Router) + React 19<br/><i>(Dashboards · Chat AI · Force Graph · Heatmaps)</i>"]:::clientStyle
+    end
+
+    UI -->|HTTPS / REST API + JWT Bearer| FastAPI
+
+    subgraph BackendLayer["⚡ FASTAPI BACKEND SERVICE LAYER (Python 3.9+)"]
+        FastAPI["FastAPI App Gateway & CORS Middleware"]:::apiStyle
+
+        subgraph CoreModules["Service Modules"]
+            Auth["🔒 Auth & RBAC<br/><i>JWT · Sessions · Audit</i>"]:::authStyle
+            ChatAI["🤖 Conversational AI<br/><i>Tool Loop & Agent</i>"]:::aiStyle
+            GraphIntel["🕸️ Graph Intelligence<br/><i>Cypher & Union-Find</i>"]:::graphStyle
+            Financial["💰 Financial Crime<br/><i>Money Trail Tracing</i>"]:::finStyle
+            Analytics["📊 Analytics Engine<br/><i>DuckDB Execution</i>"]:::analyticsStyle
+            Predictor["🔮 ML Predictor<br/><i>XGBoost & ARIMA</i>"]:::mlStyle
+        end
+
+        FastAPI --> Auth & ChatAI & GraphIntel & Financial & Analytics & Predictor
+    end
+
+    subgraph StorageLayer["🗄️ PERSISTENCE & ANALYTICS DATABASES"]
+        PG[("🐘 PostgreSQL (Neon)<br/><i>Users · RBAC · Audit Logs</i>")]:::dbPgStyle
+        DuckDB[("🦆 DuckDB (Embedded OLAP)<br/><i>Crime Statistics CSVs</i>")]:::dbDuckStyle
+        Neo4j[("🕸️ Neo4j Graph (AuraDB)<br/><i>Entities · FIRs · Accounts</i>")]:::dbNeoStyle
+    end
+
+    subgraph AICloud["☁️ EXTERNAL AI LLM PROVIDERS"]
+        LLM["🤖 OpenRouter API / Google Gemini API<br/><i>(Tool Calling & Natural Language Response)</i>"]:::llmStyle
+    end
+
+    Auth --> PG
+    Predictor --> DuckDB
+    Analytics --> DuckDB
+    ChatAI <-->|Function Calls| LLM
+    ChatAI --> DuckDB & Neo4j
+    GraphIntel --> Neo4j
+    Financial --> Neo4j
 ```
 
 ### Data Processing Pipeline
@@ -100,74 +118,76 @@ The CrimeRakshak platform functions across 5 integrated operational stages:
 
 ```mermaid
 flowchart TD
-    subgraph Stage1["1. Data Ingestion & Storage"]
-        RawCSV[KSP Crime Datasets] --> Loader[Ingestion Pipeline]
-        Loader -->|Structured Records| PG[(PostgreSQL - Neon)]
-        Loader -->|Pre-aggregated Stats| DDB[(DuckDB OLAP Engine)]
-        Loader -->|Node & Edge Relations| N4J[(Neo4j Graph Database)]
+    %% Custom Stage Color Themes
+    classDef stage1 fill:#0F766E,stroke:#0D9488,stroke-width:2px,color:#FFFFFF
+    classDef stage2 fill:#1D4ED8,stroke:#2563EB,stroke-width:2px,color:#FFFFFF
+    classDef stage3 fill:#6D28D9,stroke:#7C3AED,stroke-width:2px,color:#FFFFFF
+    classDef stage4 fill:#C2410C,stroke:#EA580C,stroke-width:2px,color:#FFFFFF
+    classDef stage5 fill:#15803D,stroke:#16A34A,stroke-width:2px,color:#FFFFFF
+
+    subgraph Stage1["📥 STAGE 1: Data Ingestion & Storage"]
+        RawCSV[KSP Crime CSV Datasets] --> Loader[Ingestion Pipeline]
+        Loader -->|Structured Records| PG[(🐘 PostgreSQL - Neon)]:::stage1
+        Loader -->|Pre-aggregated Stats| DDB[(🦆 DuckDB OLAP)]:::stage1
+        Loader -->|Entities & Relations| N4J[(🕸️ Neo4j Graph DB)]:::stage1
     end
 
-    subgraph Stage2["2. Graph & Analytics Processing"]
-        N4J -->|Cypher Queries| GraphEngine[Graph Service]
-        DDB -->|Vectorized SQL| AnalyticsEngine[Analytics Service]
-        GraphEngine -->|Community Detection| UF[Union-Find Co-offenders]
-        AnalyticsEngine -->|Trend Extraction| ML[XGBoost / ARIMA Engine]
+    subgraph Stage2["⚡ STAGE 2: Graph & Analytics Processing"]
+        N4J -->|Cypher Queries| GraphEngine[Graph Service]:::stage2
+        DDB -->|Vectorized SQL| AnalyticsEngine[Analytics Service]:::stage2
+        GraphEngine -->|Community Detection| UF[Union-Find Co-offenders]:::stage2
+        AnalyticsEngine -->|Feature Extraction| ML[XGBoost / ARIMA Engine]:::stage2
     end
 
-    subgraph Stage3["3. AI Reasoning & Tool Calling"]
-        UserMsg[User Query] --> Translator{Language Check}
-        Translator -->|Kannada| ENTrans[KN → EN Translation]
-        Translator -->|English| Agent[Tool-Calling LLM Agent]
+    subgraph Stage3["🧠 STAGE 3: AI Reasoning & Tool Calling"]
+        UserQuery[User Query EN / KN] --> Translator{Language Check}:::stage3
+        Translator -->|Kannada| ENTrans[KN → EN Translation]:::stage3
+        Translator -->|English| Agent[Tool-Calling LLM Agent]:::stage3
         ENTrans --> Agent
-        Agent <-->|Execute Tools| Tools[9 System Tools]
+        Agent <-->|Execute Tools| Tools[9 System Tools]:::stage3
         Tools <--> GraphEngine
         Tools <--> AnalyticsEngine
     end
 
-    subgraph Stage4["4. Synthesis & Security Control"]
-        Agent -->|Synthesized Data| Guard[SELECT-only & Audit Guardrail]
-        Guard --> Audit[(PostgreSQL Audit Log)]
-        Guard --> ResTrans{Target Language}
-        ResTrans -->|Kannada| KNTrans[EN → KN Translation]
-        ResTrans -->|English| FinalAns[Final Grounded Answer]
+    subgraph Stage4["🛡️ STAGE 4: Synthesis & Security Controls"]
+        Agent -->|Synthesized Result| Guard[SELECT-only & Audit Guardrail]:::stage4
+        Guard --> Audit[(PostgreSQL Audit Log)]:::stage4
+        Guard --> ResTrans{Target Language}:::stage4
+        ResTrans -->|Kannada| KNTrans[EN → KN Translation]:::stage4
+        ResTrans -->|English| FinalAns[Final Grounded Response]:::stage4
         KNTrans --> FinalAns
     end
 
-    subgraph Stage5["5. UI Presentation & Export"]
-        FinalAns --> WebApp[Next.js Dashboard & Chat UI]
-        FinalAns --> PDFGen[ReportLab PDF Engine]
+    subgraph Stage5["🖥️ STAGE 5: UI Presentation & Export"]
+        FinalAns --> WebApp[Next.js Dashboard & Chat UI]:::stage5
+        FinalAns --> PDFGen[ReportLab PDF Engine]:::stage5
     end
 ```
 
 ### Conversational AI Data Flow
 
-```
-User Query (EN / KN)
-       │
-       ▼
-[Deep-Translator Module] ──► Standardized English Prompt
-       │
-       ▼
-[LLM Agent (Gemini / OpenRouter)]
-       │
-       ├──► Call query_crime_stats()         ──► Query DuckDB
-       ├──► Call district_review_summary()   ──► Query DuckDB
-       ├──► Call rising_crimes()             ──► Query DuckDB
-       ├──► Call crime_trend()               ──► Query DuckDB
-       ├──► Call disposal_analysis()         ──► Query DuckDB
-       ├──► Call case_summary()              ──► Query Neo4j
-       ├──► Call investigation_timeline()    ──► Query Neo4j
-       ├──► Call similar_cases()             ──► Query Neo4j
-       └──► Call suggest_leads()             ──► Query Neo4j
-       │
-       ▼
-[Structured Output Synthesis] ──► Cites exact data sources for verification
-       │
-       ▼
-[Language Translator] ──► Formats to target language (English/Kannada)
-       │
-       ▼
-Response rendered in Next.js UI + Available for PDF Download
+```mermaid
+flowchart LR
+    classDef inputStyle fill:#3B82F6,stroke:#1D4ED8,color:#FFF,font-weight:bold
+    classDef agentStyle fill:#8B5CF6,stroke:#6D28D9,color:#FFF,font-weight:bold
+    classDef duckStyle fill:#CA8A04,stroke:#A16207,color:#FFF
+    classDef neoStyle fill:#047857,stroke:#065F46,color:#FFF
+    classDef outStyle fill:#10B981,stroke:#059669,color:#FFF,font-weight:bold
+
+    Query["User Query<br/>(English / Kannada)"]:::inputStyle --> Trans["Translator Module<br/>(deep-translator)"]:::inputStyle
+    Trans --> Agent["LLM Agent Loop<br/>(Gemini / OpenRouter)"]:::agentStyle
+
+    Agent -->|Analytics Tool| T1["query_crime_stats()"]:::duckStyle
+    Agent -->|Summary Tool| T2["district_review_summary()"]:::duckStyle
+    Agent -->|Trend Tool| T3["rising_crimes() / crime_trend()"]:::duckStyle
+    Agent -->|Case Tool| T4["case_summary() / timeline()"]:::neoStyle
+    Agent -->|Lead Tool| T5["suggest_leads() / similar_cases()"]:::neoStyle
+
+    T1 & T2 & T3 --> DuckDB[("🦆 DuckDB")]:::duckStyle
+    T4 & T5 --> Neo4j[("🕸️ Neo4j Graph")]:::neoStyle
+
+    DuckDB & Neo4j --> Grounded["Grounded Answer + Citations"]:::outStyle
+    Grounded --> Render["Next.js UI & PDF Export"]:::outStyle
 ```
 
 ---
