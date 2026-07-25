@@ -32,19 +32,54 @@ export async function GET(
     }`;
 
     const token = await getClerkToken();
-    const res = await fetch(targetUrl, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-    });
+    let res: Response | null = null;
+    let lastError: any = null;
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 60000);
+
+        const candidate = await fetch(targetUrl, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+
+        if (candidate.status >= 502 && candidate.status <= 504 && attempt < 3) {
+          await new Promise((r) => setTimeout(r, 2500 * attempt));
+          continue;
+        }
+        res = candidate;
+        break;
+      } catch (err) {
+        lastError = err;
+        if (attempt < 3) {
+          await new Promise((r) => setTimeout(r, 2500 * attempt));
+        }
+      }
+    }
+
+    if (!res) {
+      return NextResponse.json(
+        { error: "analytics proxy failure", detail: "Backend analytics service unreachable or starting up." },
+        { status: 503 }
+      );
+    }
 
     if (!res.ok) {
       const text = await res.text();
+      const isHtml = text.trim().startsWith("<") || text.includes("<!DOCTYPE") || text.includes("<html");
+      const detailMsg = isHtml
+        ? `Backend analytics returned ${res.status} ${res.statusText || ""}. Service may be waking up.`
+        : text;
       return NextResponse.json(
-        { error: `backend error ${res.status}`, detail: text },
+        { error: `backend error ${res.status}`, detail: detailMsg },
         { status: res.status }
       );
     }
@@ -74,19 +109,54 @@ export async function POST(
     const body = await req.json();
 
     const token = await getClerkToken();
-    const res = await fetch(targetUrl, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+    let res: Response | null = null;
+    let lastError: any = null;
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 60000);
+
+        const candidate = await fetch(targetUrl, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+
+        if (candidate.status >= 502 && candidate.status <= 504 && attempt < 3) {
+          await new Promise((r) => setTimeout(r, 2500 * attempt));
+          continue;
+        }
+        res = candidate;
+        break;
+      } catch (err) {
+        lastError = err;
+        if (attempt < 3) {
+          await new Promise((r) => setTimeout(r, 2500 * attempt));
+        }
+      }
+    }
+
+    if (!res) {
+      return NextResponse.json(
+        { error: "analytics proxy failure", detail: "Backend analytics service unreachable or starting up." },
+        { status: 503 }
+      );
+    }
 
     if (!res.ok) {
       const text = await res.text();
+      const isHtml = text.trim().startsWith("<") || text.includes("<!DOCTYPE") || text.includes("<html");
+      const detailMsg = isHtml
+        ? `Backend analytics returned ${res.status} ${res.statusText || ""}. Service may be waking up.`
+        : text;
       return NextResponse.json(
-        { error: `backend error ${res.status}`, detail: text },
+        { error: `backend error ${res.status}`, detail: detailMsg },
         { status: res.status }
       );
     }

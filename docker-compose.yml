@@ -1,13 +1,5 @@
-# Local databases for CrimeRakshak.
-# Credentials match the defaults in .env.example so the backend connects
-# out of the box:
-#   POSTGRES_URI=postgresql://user:password@localhost:5544/crimerakshak
-#   NEO4J_URI=bolt://localhost:7687  (neo4j / password)
-# Postgres is published on host port 5544 to avoid clashing with a local
-# PostgreSQL service already using 5432/5433.
-#
-# Start:  docker compose up -d
-# Stop:   docker compose down        (add -v to also wipe data)
+version: '3.8'
+
 services:
   postgres:
     image: postgres:16
@@ -27,22 +19,41 @@ services:
       timeout: 5s
       retries: 10
 
-#  neo4j:
-#    image: neo4j:5
-#    container_name: crimerakshak-neo4j
-#    environment:
-#      NEO4J_AUTH: neo4j/password
-#    ports:
-#      - "7474:7474"   # Browser UI
-#      - "7687:7687"   # Bolt
-#    volumes:
-#      - neo4jdata:/data
-#    healthcheck:
-#      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
-#      interval: 10s
-#      timeout: 5s
-#      retries: 10
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: crimerakshak-backend
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    environment:
+      - PORT=9000
+      - ENVIRONMENT=production
+      - POSTGRES_URI=postgresql://user:password@postgres:5432/crimerakshak
+      - DATASETS_DIR=/datasets
+      - DUCKDB_PATH=crime_stats.duckdb
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - datasets_data:/datasets
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: crimerakshak-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NEXT_PUBLIC_API_URL=http://localhost:9000/api/v1
+      - BACKEND_URL=http://backend:9000
+    depends_on:
+      - backend
 
 volumes:
   pgdata:
-#  neo4jdata:
+  datasets_data:

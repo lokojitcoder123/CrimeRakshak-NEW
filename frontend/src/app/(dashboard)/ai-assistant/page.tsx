@@ -118,8 +118,26 @@ export default function AIAssistantPage() {
         language: chatLang,
       }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data?.detail || data?.error || `Request failed (${res.status})`);
+
+    let data: any = null;
+    try {
+      data = await res.json();
+    } catch {
+      data = null;
+    }
+
+    if (!res.ok) {
+      let rawMsg = data?.detail || data?.error || `Request failed (${res.status})`;
+      if (typeof rawMsg === "string" && (rawMsg.trim().startsWith("<") || rawMsg.includes("<!DOCTYPE") || rawMsg.includes("<html"))) {
+        rawMsg = `Backend server is temporarily unavailable or starting up (HTTP ${res.status}). Please wait a few seconds and try again.`;
+      }
+      throw new Error(rawMsg);
+    }
+
+    if (!data) {
+      throw new Error("Invalid response from chat server");
+    }
+
     conversationId.current = data.conversation_id ?? conversationId.current;
     return { answer: data.answer ?? "(no answer)", sources: data.sources ?? [], trace: data.trace ?? [] };
   }
@@ -177,10 +195,14 @@ export default function AIAssistantPage() {
         return newSessions;
       });
 
-    } catch (err) {
+    } catch (err: any) {
+      let errMsg = String(err?.message || err);
+      if (errMsg.trim().startsWith("<") || errMsg.includes("<!DOCTYPE") || errMsg.includes("<html")) {
+        errMsg = "Backend server is temporarily unavailable or starting up. Please wait a few seconds and try again.";
+      }
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: `⚠️ Could not reach the AI backend.\n${String(err)}`, timestamp: new Date() },
+        { role: "assistant", content: `⚠️ Could not reach the AI backend.\n${errMsg}`, timestamp: new Date() },
       ]);
     } finally {
       setLoading(false);
@@ -250,8 +272,12 @@ export default function AIAssistantPage() {
     try {
       const { answer } = await callChat(`Give me investigation and decision support for ${district} district.`);
       setBriefing(answer);
-    } catch (err) {
-      setBriefing(`⚠️ Could not load briefing.\n${String(err)}`);
+    } catch (err: any) {
+      let errMsg = String(err?.message || err);
+      if (errMsg.trim().startsWith("<") || errMsg.includes("<!DOCTYPE") || errMsg.includes("<html")) {
+        errMsg = "Backend server is temporarily unavailable or starting up. Please wait a few seconds and try again.";
+      }
+      setBriefing(`⚠️ Could not load briefing.\n${errMsg}`);
     } finally {
       setBriefingLoading(false);
     }

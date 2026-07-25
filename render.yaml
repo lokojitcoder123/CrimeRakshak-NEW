@@ -1,0 +1,54 @@
+services:
+  # ── Backend Service (FastAPI) ──
+  - type: web
+    name: crimerakshak-backend
+    env: python
+    region: singapore
+    plan: free
+    rootDir: backend
+    buildCommand: "./start.sh"
+    startCommand: "python3 run.py"
+    envVars:
+      - key: PORT
+        value: 9000
+      - key: ENVIRONMENT
+        value: production
+      - key: POSTGRES_URI
+        sync: false
+      - key: NEO4J_URI
+        sync: false
+      - key: NEO4J_USER
+        value: neo4j
+      - key: NEO4J_PASSWORD
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CLERK_SECRET_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: DATASETS_DIR
+        value: datasets
+      - key: DUCKDB_PATH
+        value: crime_stats.duckdb
+
+  # ── Frontend Service (Next.js) ──
+  - type: web
+    name: crimerakshak-frontend
+    env: node
+    region: singapore
+    plan: free
+    rootDir: frontend
+    buildCommand: "npm install && npm run build"
+    startCommand: "npm start"
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: NEXT_PUBLIC_API_URL
+        value: https://crimerakshak-backend.onrender.com/api/v1
+      - key: BACKEND_URL
+        value: https://crimerakshak-backend.onrender.com
+      - key: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false

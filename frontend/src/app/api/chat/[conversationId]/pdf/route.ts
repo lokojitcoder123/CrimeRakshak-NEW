@@ -22,12 +22,43 @@ export async function GET(
   const { conversationId } = await params;
   try {
     const token = await getClerkToken();
-    const res = await fetch(`${BACKEND_URL}/api/v1/chat/${conversationId}/pdf`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    let res: Response | null = null;
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 60000);
+
+        const candidate = await fetch(`${BACKEND_URL}/api/v1/chat/${conversationId}/pdf`, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+
+        if (candidate.status >= 502 && candidate.status <= 504 && attempt < 3) {
+          await new Promise((r) => setTimeout(r, 2500 * attempt));
+          continue;
+        }
+        res = candidate;
+        break;
+      } catch (err) {
+        if (attempt < 3) {
+          await new Promise((r) => setTimeout(r, 2500 * attempt));
+        }
+      }
+    }
+
+    if (!res) {
+      return Response.json({ error: "proxy failure", detail: "Backend PDF service unreachable or starting up." }, { status: 503 });
+    }
+
     if (!res.ok) {
       const text = await res.text();
-      return Response.json({ error: `backend ${res.status}`, detail: text }, { status: 502 });
+      const isHtml = text.trim().startsWith("<") || text.includes("<!DOCTYPE") || text.includes("<html");
+      const detailMsg = isHtml
+        ? `Backend PDF export returned status ${res.status}. Service may be waking up.`
+        : text;
+      return Response.json({ error: `backend ${res.status}`, detail: detailMsg }, { status: res.status });
     }
     const blob = await res.arrayBuffer();
     return new Response(blob, {

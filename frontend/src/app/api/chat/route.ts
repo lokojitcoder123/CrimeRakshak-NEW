@@ -31,24 +31,65 @@ export async function POST(req: Request) {
     }
 
     const token = await getClerkToken();
-    const res = await fetch(`${BACKEND_URL}/api/v1/chat`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        message,
-        conversation_id: conversation_id ?? null,
-        language: language ?? "en",
-      }),
-    });
+
+    let res: Response | null = null;
+    let lastError: any = null;
+
+    // Retry loop for Render cold starts (backend may take 30-50s to wake up from sleep)
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 60000); // 60s timeout
+
+        const candidate = await fetch(`${BACKEND_URL}/api/v1/chat`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            message,
+            conversation_id: conversation_id ?? null,
+            language: language ?? "en",
+          }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+
+        if (candidate.status >= 502 && candidate.status <= 504 && attempt < 3) {
+          await new Promise((r) => setTimeout(r, 3000 * attempt));
+          continue;
+        }
+
+        res = candidate;
+        break;
+      } catch (err) {
+        lastError = err;
+        if (attempt < 3) {
+          await new Promise((r) => setTimeout(r, 3000 * attempt));
+        }
+      }
+    }
+
+    if (!res) {
+      return Response.json(
+        {
+          error: "Backend service unreachable",
+          detail: "The AI backend service is currently unreachable or starting up. Please try again in a few seconds.",
+        },
+        { status: 503 }
+      );
+    }
 
     if (!res.ok) {
       const text = await res.text();
+      const isHtml = text.trim().startsWith("<") || text.includes("<!DOCTYPE") || text.includes("<html");
+      const detailMsg = isHtml
+        ? `Backend service returned status ${res.status} ${res.statusText || ""}. The service may be starting up or temporarily offline.`
+        : text;
       return Response.json(
-        { error: `backend error ${res.status}`, detail: text },
-        { status: 502 },
+        { error: `backend error ${res.status}`, detail: detailMsg },
+        { status: res.status }
       );
     }
     const data = await res.json();
@@ -56,7 +97,7 @@ export async function POST(req: Request) {
   } catch (err) {
     return Response.json(
       { error: "proxy failure", detail: String(err) },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
