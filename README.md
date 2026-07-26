@@ -601,7 +601,10 @@ python ingest.py
 | **Start Command** | `npm start` |
 | **Root Directory** | `frontend/` |
 
-> **Note**: Update `NEXT_PUBLIC_API_URL` and `BACKEND_URL` in the frontend environment variables after deploying the backend to point to your live backend service URL.
+> **Note**: For live deployment on Zoho Catalyst AppSail, configure the frontend environment variable:
+> ```env
+> NEXT_PUBLIC_API_URL=https://crimerakshak-backend-50044347084.development.catalystappsail.in/api/v1
+> ```
 
 ---
 
