@@ -577,7 +577,11 @@ python ingest.py
 
 ## 🚀 Deployment
 
-### Backend Deployment (Render / Railway / Fly.io / AWS EC2)
+### 🌐 Live Application
+- **Frontend Live URL (Zoho Catalyst AppSail)**: [https://crimerakshak-frontend-50044347084.development.catalystappsail.in/](https://crimerakshak-frontend-50044347084.development.catalystappsail.in/)
+- **Backend Live URL (Zoho Catalyst AppSail)**: [https://crimerakshak-backend-50044347084.development.catalystappsail.in](https://crimerakshak-backend-50044347084.development.catalystappsail.in)
+
+### Backend Deployment (Render / Railway / Fly.io / AWS EC2 / Catalyst AppSail)
 
 | Parameter | Configuration |
 |---|---|
@@ -587,10 +591,11 @@ python ingest.py
 | **Port Variable** | `PORT` (Defaults to `9000`) |
 | **Health Check Endpoint** | `/health` |
 
-### Frontend Deployment (Vercel / Netlify)
+### Frontend Deployment (Zoho Catalyst AppSail / Vercel / Netlify)
 
 | Parameter | Configuration |
 |---|---|
+| **Platform** | Zoho Catalyst AppSail |
 | **Build Command** | `npm run build` |
 | **Output Directory** | `.next` |
 | **Start Command** | `npm start` |
